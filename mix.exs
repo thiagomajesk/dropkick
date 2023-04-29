@@ -1,13 +1,19 @@
 defmodule Dropkick.MixProject do
   use Mix.Project
 
+  @version "0.0.0"
+  @url "https://github.com/thiagomajesk/dropkick"
+
   def project do
     [
       app: :dropkick,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.14",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      description: description(),
+      package: package(),
+      docs: docs(),
       deps: deps(),
       preferred_cli_env: [
         vcr: :test,
@@ -16,6 +22,33 @@ defmodule Dropkick.MixProject do
         "vcr.show": :test
       ],
       xref: [exclude: [:hackney_request]]
+    ]
+  end
+
+  defp description() do
+    """
+    Easy file uploads for Elixir/Phoenix
+    """
+  end
+
+  defp package do
+    [
+      maintainers: ["Thiago Majesk Goulart"],
+      licenses: ["AGPL-3.0-only"],
+      links: %{"GitHub" => @url},
+      files: ~w(lib mix.exs README.md LICENSE assets package.json)
+    ]
+  end
+
+  defp docs() do
+    [
+      source_ref: "v#{@version}",
+      main: "README",
+      canonical: "http://hexdocs.pm/dropkick",
+      source_url: @url,
+      extras: [
+        "README.md": [filename: "README"]
+      ]
     ]
   end
 
@@ -38,7 +71,8 @@ defmodule Dropkick.MixProject do
       {:ecto, "~> 3.0"},
       {:plug, "~> 1.0"},
       {:exvcr, "~> 0.13.5", only: :test},
-      {:image, "~> 0.30.0"}
+      {:image, "~> 0.30.0"},
+      {:ex_doc, "~> 0.29", only: :dev, runtime: false}
     ]
   end
 end

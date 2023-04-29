@@ -10,7 +10,7 @@ Some inspiration was taken from other projects like [Capsule](https://github.com
 ```elixir
 def deps do
   [
-    {:dropkick, "~> 0.1.0"}
+    {:dropkick, ">= 0.0.0"}
   ]
 end
 ```
