@@ -6,46 +6,6 @@ defmodule Dropkick do
   alias Dropkick.Attachment
 
   @doc """
-  Caches an attachable by saving it on the provided directory under the "cache" prefix by default.
-  When an attachable is cached we won't calculate any metadata information, the file is only
-  saved to the directory. This function is usually usefull when you are doing async uploads -
-  where you first save the file to a temporary location and only after some confirmation you actually move
-  the file to its final destination. You probably want to clean this directory from time to time.
-  """
-  def cache(attachable, opts \\ []) do
-    opts = Keyword.put(opts, :prefix, "cache")
-
-    with {:ok, atch} <- put(attachable, opts) do
-      {:ok, Map.replace!(atch, :status, :cached)}
-    end
-  end
-
-  @doc """
-  Stores an attachable by saving it on the provided directory under the "store" prefix by default.
-  When an attachable is stored we'll calculate metadata information before moving the file to its destination.
-  """
-  def store(upload, opts \\ []) do
-    opts = Keyword.put(opts, :prefix, "store")
-
-    with {:ok, atch} <- put(upload, opts) do
-      {:ok, Map.replace!(atch, :status, :stored)}
-    end
-  end
-
-  @doc """
-  Moves an attachble from its current destination to another one.
-  This function can be used to "promote" cached attachments without having
-  to worry about cleaning up the temporary directory.
-  """
-  def move(%Attachment{status: :cached} = atch, opts \\ []) do
-    dest = Keyword.fetch!(opts, :dest)
-
-    with {:ok, atch} <- copy(atch, dest, move: true) do
-      {:ok, Map.replace!(atch, :status, :stored)}
-    end
-  end
-
-  @doc """
   Creates a version of the attachment with some transformation.
   Transformations validated against an attachment `content_type`.
   The current transformations supported are:
@@ -65,11 +25,77 @@ defmodule Dropkick do
     end)
   end
 
+  @doc """
+  Extracts context from the attachment.
+  """
+  def contextualize(%Attachment{} = atch) do
+    key = Dropkick.Attachable.key(atch)
+
+    %{
+      extension: Path.extname(key),
+      directory: Path.dirname(key),
+      filename: Path.basename(key)
+    }
+  end
+
+  @doc """
+  Extracts metadata from the attachment.
+  """
+  def extract_metadata(%Attachment{content_type: "image/" <> _} = atch) do
+    # If our attachment is an image, we try to extract additional information.
+    # Depending on the complexity we should probably move this into a 'Metadata' module in the future.
+    case Dropkick.Attachable.content(atch) do
+      {:ok, content} ->
+        {mimetype, width, height, variant} = ExImageInfo.info(content)
+
+        %{
+          mimetype: mimetype,
+          dimension: "#{width}x#{height}",
+          variant: variant
+        }
+
+      _ ->
+        %{}
+    end
+  end
+
+  # If we don't yet support extracting metadata from the content type we do nothing.
+  # In the future this could be expanded to other formats as long as we have a proper lib in the ecosystem do do that.
+  def extract_metadata(%Attachment{} = atch), do: atch
+
+  @doc """
+  Calls the underlyning storage's `put` function.
+  Check the module `Dropkick.Storage` for documentation about the available options.
+  """
+  def put(attachable, opts \\ []),
+    do: Dropkick.Storage.current().put(attachable, opts)
+
+  @doc """
+  Calls the underlyning storage's `read` function.
+  Check the module `Dropkick.Storage` for documentation about the available options.
+  """
+  def read(attachable, opts \\ []),
+    do: Dropkick.Storage.current().read(attachable, opts)
+
+  @doc """
+  Calls the underlyning storage's `copy` function.
+  Check the module `Dropkick.Storage` for documentation about the available options.
+  """
+  def copy(attachable, dest, opts \\ []),
+    do: Dropkick.Storage.current().copy(attachable, dest, opts)
+
+  @doc """
+  Calls the underlyning storage's `delete` function.
+  Check the module `Dropkick.Storage` for documentation about the available options.
+  """
+  def delete(attachable, opts \\ []),
+    do: Dropkick.Storage.current().delete(attachable, opts)
+
   defp transform_stream(atch, transforms) do
     Task.Supervisor.async_stream_nolink(Dropkick.TransformTaskSupervisor, transforms, fn
       {:thumbnail, size, params} ->
         with {:ok, transform} <- Dropkick.Transform.thumbnail(atch, size, params),
-             {:ok, version} <- store(transform, folder: Path.dirname(transform.key)) do
+             {:ok, version} <- put(transform, folder: Path.dirname(transform.key)) do
           version
         end
 
@@ -77,50 +103,4 @@ defmodule Dropkick do
         raise "Not a valid transform param #{inspect(transform)}"
     end)
   end
-
-  def url(%Attachment{} = atch, opts \\ []) do
-    version = Keyword.get(opts, :version)
-    atch = (version && version(atch, version)) || atch
-    Path.join(Keyword.get(opts, :host, "/"), atch.key)
-  end
-
-  def version(%Attachment{} = atch, version) do
-    Enum.find(atch.versions, &(&1.version == version))
-  end
-
-  def contextualize(%Attachment{} = atch) do
-    key = Dropkick.Attachable.key(atch)
-
-    %{
-      filename: Path.basename(key),
-      extension: Path.extname(key),
-      directory: Path.dirname(key)
-    }
-  end
-
-  @doc """
-  Calls the underlyning storage's `put` function.
-  Check the module `Dropkick.Storage` for documentation about the available options.
-  """
-  def put(upload, opts \\ []), do: storage!().put(upload, opts)
-
-  @doc """
-  Calls the underlyning storage's `read` function.
-  Check the module `Dropkick.Storage` for documentation about the available options.
-  """
-  def read(upload, opts \\ []), do: storage!().read(upload, opts)
-
-  @doc """
-  Calls the underlyning storage's `copy` function.
-  Check the module `Dropkick.Storage` for documentation about the available options.
-  """
-  def copy(upload, dest, opts \\ []), do: storage!().copy(upload, dest, opts)
-
-  @doc """
-  Calls the underlyning storage's `delete` function.
-  Check the module `Dropkick.Storage` for documentation about the available options.
-  """
-  def delete(upload, opts \\ []), do: storage!().delete(upload, opts)
-
-  defp storage!(), do: Application.fetch_env!(:dropkick, :storage)
 end

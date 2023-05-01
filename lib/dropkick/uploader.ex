@@ -1,9 +1,9 @@
-defmodule Dropkick.Attachableer do
+defmodule Dropkick.Uploader do
   @moduledoc """
   This modules provides a definition to specialized uploaders that can be used to specify custom upload workflows.
   A specialized uploader acts as a hook before calling the function at `Dropkick` and allow you to modify how the upload is handled.
   """
-  alias Dropkick.{Upload, Attachment}
+  alias Dropkick.{Attachable, Attachment}
 
   @type option :: {atom(), any()}
 
@@ -14,100 +14,109 @@ defmodule Dropkick.Attachableer do
           | {:thumbnail, pos_integer() | String.t(), list()}
 
   @doc """
-  See `Dropkick.cache/2` for more information.
+  Caches an attachable by saving it on the provided directory under the "cache" prefix by default.
+  When an attachable is cached we won't calculate any metadata information, the file is only
+  saved to the directory. This function is usually usefull when you are doing async uploads -
+  where you first save the file to a temporary location and only after some confirmation you actually move
+  the file to its final destination. You probably want to clean this directory from time to time.
   """
 
-  @callback cache(upload :: Upload.t(), list()) :: Attachment.type()
+  @callback cache({Attachable.t(), map()}, [option]) :: {:ok, Attachment.type()}
 
   @doc """
-  See `Dropkick.store/2` for more information.
+   Stores an attachable by saving it on the provided directory under the "store" prefix by default.
+  When an attachable is stored we'll calculate metadata information before moving the file to its destination.
   """
 
-  @callback store(upload :: Upload.t(), list()) :: Attachment.type()
-
-  @doc """
-  See `Dropkick.move/2` for more information.
-  """
-  @callback move(atch :: Attachment.t()) :: Attachment.type()
+  @callback store({Attachable.t(), map()}, [option]) :: {:ok, Attachment.type()}
 
   @doc """
   Defines a series of validations that will be called before caching the attachment.
   """
-  @callback validate(Attachment.type(), context :: map()) :: :ok | {:error, String.t()}
+  @callback validate(Attachable.t(), map()) :: :ok | {:error, String.t()}
 
   @doc """
   Defines the transformations to be applied after saving attachments.
   """
-  @callback transforms(Attachment.type(), context :: map()) :: transforms()
-
-  @doc """
-  Overrides the filename used when the attachment is stored.
-  The original filename will still be kept as a metadata.
-  """
-  @callback filename(Attachment.type(), context :: map()) :: String.t()
+  @callback transform(Attachment.type(), map()) :: transforms()
 
   @doc """
   Defines the default prefix that will be used to store and retrieve uploads.
   """
-  @callback storage_prefix(Attachment.type(), context :: map()) :: String.t()
+  @callback storage_prefix(Attachable.t(), map()) :: String.t()
 
-  @doc """
-  Provide a default URL if no upload was found
-  """
-  @callback default_url(context :: map()) :: String.t()
-
-  defmacro using(_opts) do
+  defmacro __using__(_opts) do
     quote do
-      @behaviour Dropkick.Attachableer
+      @behaviour Dropkick.Uploader
 
       require Logger
 
-      def cache(upload, opts \\ []) do
-        context = %{action: :cache}
+      def cache(struct_or_tuple, opts \\ [])
 
-        folder = Keyword.fetch!(opts, :folder, "uploads")
-        prefix = __MODULE__.storage_prefix(upload, context)
+      def cache(attachable, opts) when is_struct(attachable),
+        do: cache({attachable, %{}}, opts)
 
-        with {:ok, atch} <- Dropkick.cache(upload, folder: folder, prefix: prefix) do
-          context = Map.merge(context, Dropkick.contextualize(atch))
-          Dropkick.transform(atch, __MODULE__.transforms(atch, context))
+      def cache({attachable, scope}, opts) when is_map(scope) do
+        scope = Map.put(scope, :action, :cache)
+
+        folder = Keyword.get(opts, :folder, "uploads")
+        prefix = __MODULE__.storage_prefix(attachable, scope)
+
+        cache_opts = [folder: folder, prefix: prefix]
+
+        with :ok <- __MODULE__.validate(attachable, scope),
+             {:ok, atch} <- Dropkick.put(attachable, cache_opts) do
+          metadata =
+            merge_metadata([
+              Dropkick.contextualize(atch),
+              Dropkick.extract_metadata(atch)
+            ])
+
+          atch = Map.put(atch, :metadata, metadata)
+          transforms = list_transforms(atch, scope)
+          {:ok, Dropkick.transform(atch, transforms)}
         end
       end
 
-      def store(upload, opts \\ []) do
-        context = %{action: :store}
+      def store(struct_or_tuple, opts \\ [])
 
-        folder = Keyword.fetch!(opts, :folder, "uploads")
-        prefix = __MODULE__.storage_prefix(upload, context)
+      def store(attachable, opts) when is_struct(attachable),
+        do: store({attachable, %{}}, opts)
 
-        with {:ok, atch} <- Dropkick.store(upload, folder: folder, prefix: prefix) do
-          context = Map.merge(context, Dropkick.contextualize(atch))
-          Dropkick.transform(atch, __MODULE__.transforms(atch, context))
+      def store({attachable, scope}, opts) when is_map(scope) do
+        scope = Map.put(scope, :action, :store)
+
+        folder = Keyword.get(opts, :folder, "uploads")
+        prefix = __MODULE__.storage_prefix(attachable, scope)
+
+        store_opts = [folder: folder, prefix: prefix]
+
+        with :ok <- __MODULE__.validate(attachable, scope),
+             {:ok, atch} <- Dropkick.put(attachable, store_opts) do
+          metadata =
+            merge_metadata([
+              Dropkick.contextualize(atch),
+              Dropkick.extract_metadata(atch)
+            ])
+
+          atch = Map.put(atch, :metadata, metadata)
+          transforms = list_transforms(atch, scope)
+          {:ok, Dropkick.transform(atch, transforms)}
         end
       end
 
-      defdelegate move(attachment), to: Dropkick
+      def url(%Attachment{key: key}) do
+        Path.join(Application.get_env(:dropkick, :host, "/"), key)
+      end
 
-      defdelegate url(attachment, opts), to: Dropkick
-
-      defdelegate version(attachment, version), to: Dropkick
-
-      def validate(_atch, _context) do
+      def validate(_attachable, _scope) do
         raise "Function validate/2 not implemented for #{__MODULE__}"
       end
 
-      def filename(%{filename: filename}, _context), do: filename
+      def storage_prefix(_attachable, %{action: action}), do: to_string(action)
 
-      def storage_prefix(_atch, %{action: cache}), do: to_string(cache)
-
-      def transforms(_atch, context) do
-        case context do
-          %{action: :store, version: :thumbnail} ->
-            {:thumbnail, "250x250", [crop: :center]}
-
-          _context ->
-            :noaction
-        end
+      def transform(%Attachment{content_type: "image/" <> _}, %{action: :store}) do
+        {:thumbnail, "250x250", [crop: :center]}
       end
 
       # If user has implemented this callback but forgot to deal with the proper action
@@ -120,14 +129,22 @@ defmodule Dropkick.Attachableer do
         If this is not desirable, please implement a version of `transform/2` that handles the `cache` action.
         """
 
-        with :ok <- Logger.warn(message), do: :nooaction
+        with :ok <- Logger.warn(message), do: :noaction
       end
 
-      def default_url(%{version: version}) do
-        "/uploads/placeholder_#{version}.png"
+      defp list_transforms(atch, scope) do
+        atch
+        |> __MODULE__.transform(scope)
+        |> List.wrap()
+        |> List.flatten()
+        |> Enum.reject(&(&1 == :noaction))
       end
 
-      defoverridable default_attachment: 2
+      defp merge_metadata(maps) do
+        Enum.reduce(maps, %{}, &Map.merge(&2, &1))
+      end
+
+      defoverridable validate: 2, storage_prefix: 2, transform: 2
     end
   end
 end

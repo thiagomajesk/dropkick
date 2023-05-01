@@ -1,6 +1,6 @@
 defmodule Dropkick.Transform do
   @moduledoc false
-  defstruct [:content, :key, :filename]
+  defstruct [:key, :filename, :content]
 
   alias __MODULE__
 

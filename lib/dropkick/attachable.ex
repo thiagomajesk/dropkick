@@ -1,12 +1,15 @@
 defprotocol Dropkick.Attachable do
   @spec key(struct() | binary()) :: String.t()
-  def key(upload)
+  def key(attachable)
 
   @spec name(struct() | binary()) :: String.t()
-  def name(upload)
+  def name(attachable)
 
-  @spec content(struct() | binary()) :: {:ok, iodata()} | {:error, String.t()}
-  def content(upload)
+  @spec content(struct() | binary()) :: {:ok, binary()} | {:error, String.t()}
+  def content(attachable)
+
+  @spec type(struct() | binary()) :: binary()
+  def type(attachable)
 end
 
 defimpl Dropkick.Attachable, for: BitString do
@@ -24,6 +27,8 @@ defimpl Dropkick.Attachable, for: BitString do
       end
     end
   end
+
+  def type(path), do: MIME.from_path(path)
 end
 
 defimpl Dropkick.Attachable, for: Plug.Upload do
@@ -37,6 +42,8 @@ defimpl Dropkick.Attachable, for: Plug.Upload do
       success_tuple -> success_tuple
     end
   end
+
+  def type(%Plug.Upload{content_type: type}), do: type
 end
 
 defimpl Dropkick.Attachable, for: URI do
@@ -58,6 +65,8 @@ defimpl Dropkick.Attachable, for: URI do
         {:error, "Could not read path: #{reason}"}
     end
   end
+
+  def type(%URI{path: path}), do: MIME.from_path(path)
 end
 
 defimpl Dropkick.Attachable, for: Dropkick.Attachment do
@@ -77,6 +86,9 @@ defimpl Dropkick.Attachable, for: Dropkick.Attachment do
         raise("#{inspect(storage)} is not a module")
     end
   end
+
+  def type(%{key: key, content_type: nil}), do: MIME.from_path(key)
+  def type(%{content_type: type}), do: type
 end
 
 defimpl Dropkick.Attachable, for: Dropkick.Transform do
@@ -85,4 +97,6 @@ defimpl Dropkick.Attachable, for: Dropkick.Transform do
   def name(%{filename: name}), do: name
 
   def content(%{content: content}), do: content
+
+  def type(%{key: key}), do: MIME.from_path(key)
 end

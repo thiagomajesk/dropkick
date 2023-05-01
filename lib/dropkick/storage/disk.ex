@@ -11,8 +11,9 @@ defmodule Dropkick.Storage.Disk do
     name = Attachable.name(attachable)
     path = Path.join([folder, prefix, name])
 
-    with :ok <- File.mkdir_p!(Path.dirname(path)),
+    with :ok <- File.mkdir_p(Path.dirname(path)),
          {:ok, content} <- Attachable.content(attachable) do
+      type = Attachable.type(attachable)
       File.write!(path, content)
 
       {:ok,
@@ -20,7 +21,7 @@ defmodule Dropkick.Storage.Disk do
          key: path,
          filename: name,
          storage: __MODULE__,
-         status: :stored
+         content_type: type
        }}
     end
   end

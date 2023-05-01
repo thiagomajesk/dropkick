@@ -1,9 +1,9 @@
-defmodule UploadTest do
+defmodule AttachableTest do
   use ExUnit.Case, async: true
   use ExVCR.Mock, adapter: ExVCR.Adapter.Httpc
   use Dropkick.FileCase
 
-  describe "upload protocol" do
+  describe "attachable protocol" do
     test "works with binary", %{path: path} do
       assert Dropkick.Attachable.name("foo") == "foo"
       assert Dropkick.Attachable.name("foo/bar") == "bar"

@@ -7,6 +7,7 @@ defmodule Dropkick.Storage.Memory do
   def put(upload, _opts \\ []) do
     with {:ok, content} <- Attachable.content(upload),
          {:ok, pid} <- StringIO.open(content) do
+      type = Attachable.type(upload)
       name = Attachable.name(upload)
       key = encode_key(pid, name)
 
@@ -15,7 +16,7 @@ defmodule Dropkick.Storage.Memory do
          key: key,
          filename: name,
          storage: __MODULE__,
-         status: :stored
+         content_type: type
        }}
     end
   end

@@ -44,4 +44,9 @@ defmodule Dropkick.Storage do
   is configured as `Disk` and you try to delete an attachment which storage is setup as `Memory`, the call will fail.
   """
   @callback delete(Attachment.t(), [option]) :: :ok | {:error, String.t()}
+
+  @doc """
+  Returns the current configured storage.
+  """
+  def current, do: Application.fetch_env!(:dropkick, :storage)
 end

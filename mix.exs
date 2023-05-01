@@ -72,7 +72,9 @@ defmodule Dropkick.MixProject do
       {:plug, "~> 1.0"},
       {:exvcr, "~> 0.13.5", only: :test},
       {:image, "~> 0.30.0"},
-      {:ex_doc, "~> 0.29", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.29", only: :dev, runtime: false},
+      {:mime, "~> 2.0"},
+      {:ex_image_info, "~> 0.2.4"}
     ]
   end
 end
