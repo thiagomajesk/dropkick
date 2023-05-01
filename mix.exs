@@ -36,7 +36,7 @@ defmodule Dropkick.MixProject do
       maintainers: ["Thiago Majesk Goulart"],
       licenses: ["AGPL-3.0-only"],
       links: %{"GitHub" => @url},
-      files: ~w(lib mix.exs README.md LICENSE assets package.json)
+      files: ~w(lib mix.exs README.md)
     ]
   end
 
