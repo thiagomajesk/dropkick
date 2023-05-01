@@ -57,14 +57,21 @@ defmodule Dropkick do
     as [`Image.thumbnail/3`](https://hexdocs.pm/image/Image.html#thumbnail/3)
   """
   def transform(%Attachment{} = atch, transforms) do
-    Enum.map(transforms, fn
+    atch
+    |> transform_stream(transforms)
+    |> Stream.filter(&match?({:ok, _}, &1))
+    |> Enum.reduce(atch, fn {:ok, version}, atch ->
+      Map.update!(atch, :versions, fn versions -> [version | versions] end)
+    end)
+  end
+
+  defp transform_stream(atch, transforms) do
+    Task.Supervisor.async_stream_nolink(Dropkick.TransformTaskSupervisor, transforms, fn
       {:thumbnail, size, params} ->
-        Task.Supervisor.async_nolink(Dropkick.TransformTaskSupervisor, fn ->
-          with {:ok, transform} <- Dropkick.Transform.thumbnail(atch, size, params),
-               {:ok, version} <- store(transform, folder: Path.dirname(transform.key)) do
-            {:ok, Map.update!(atch, :versions, fn versions -> [version | versions] end)}
-          end
-        end)
+        with {:ok, transform} <- Dropkick.Transform.thumbnail(atch, size, params),
+             {:ok, version} <- store(transform, folder: Path.dirname(transform.key)) do
+          version
+        end
 
       transform ->
         raise "Not a valid transform param #{inspect(transform)}"

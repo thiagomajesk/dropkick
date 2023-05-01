@@ -56,8 +56,7 @@ defmodule DropkickTest do
       }
 
       transforms = [{:thumbnail, "50x50", [crop: :center]}]
-      tasks = Dropkick.transform(atch, transforms)
-      assert [ok: %{versions: [%{key: key}]}] = Task.await_many(tasks)
+      %Attachment{versions: [%{key: key}]} = Dropkick.transform(atch, transforms)
       assert File.exists?(key)
     end
   end
