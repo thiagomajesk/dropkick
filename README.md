@@ -35,7 +35,7 @@ defmodule FileUploader do
 end
 ```
 
-After than, you simply cast the type like you would normally do:
+After that, you simply cast the type like you would normally do:
 
 ```elixir
 def changeset(user, attrs) do
