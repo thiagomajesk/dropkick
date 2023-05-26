@@ -74,7 +74,9 @@ defmodule Dropkick.MixProject do
       {:image, "~> 0.30.0"},
       {:ex_doc, "~> 0.29", only: :dev, runtime: false},
       {:mime, "~> 2.0"},
-      {:ex_image_info, "~> 0.2.4"}
+      {:ex_image_info, "~> 0.2.4"},
+      {:ecto_sql, ">= 3.0.0", only: :test},
+      {:postgrex, ">= 0.0.0", only: :test}
     ]
   end
 end

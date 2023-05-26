@@ -1,52 +1,39 @@
 defmodule Dropkick.Storage do
-  alias Dropkick.{Attachable, Attachment}
-
-  @type option :: {atom(), any()}
-
   @doc """
-  Stores the given attachable with the underlyning storage module.
-
-  The underlyning implementation should accept the following options (besides any specific options):
+  Stores the given file with the underlyning storage module.
+  The underlyning implementation should accept any storage specific options and:
 
   - `:folder`: The base location where to save the file being transfered.
-  - `:prefix`: A sub-folder inside the current location where the file is going to be saved, defaults to `/`.
 
-  Returns a success tuple like `{:ok, %Attachment{status: :stored}}`.
+  Returns a success tuple like `{:ok, %Dropkick.Ecto.File{status: :stored}}`.
   """
-  @callback put(Attachable.t(), [option]) :: {:ok, Attachment.t()} | {:error, String.t()}
+  @callback store(Dropkick.Ecto.File.t(), Keyword.t()) ::
+              {:ok, Dropkick.Ecto.File.t()} | {:error, String.t()}
 
   @doc """
-  Reads the given attachment with the underlyning storage module.
-  When the attachment storage is set to `Disk`, we always attempt to read the file from its key.
-  Otherwise, we resort to the definition of `Attachable.content/1` so we can also read remote files if necessary.
-
-  Returns a success tuple with the content of the file like: `{:ok, content}`.
+  Reads the given file with the underlyning storage module.
+  Returns a success tuple with the contents of the file.
   """
-  @callback read(Attachment.t(), [option]) :: {:ok, binary()} | {:error, String.t()}
+  @callback read(Dropkick.Ecto.File.t(), Keyword.t()) :: {:ok, binary()} | {:error, String.t()}
 
   @doc """
-  Copies the given attachment with the underlyning storage module.
-  When the attachment storage is set to `Disk`, we always attempt to read the file from its key.
-
-  The underlyning implementation should accept the following options (besides any specific options):
+  Copies the given file with the underlyning storage module.
+  The underlyning implementation should accept any storage specific options and:
 
   - `:move`: Specifies if the file should be just copied or moved entirely, defaults to `false`.
 
-  Returns a success tuple with the attachment in the new destination like: `{:ok, %Attachment{}}`.
+  Returns a success tuple with the attachment in the new destination like: `{:ok, %Dropkick.Ecto.File{}}`.
   """
-  @callback copy(Attachment.t(), String.t(), [option]) ::
-              {:ok, Attachment.t()} | {:error, String.t()}
+  @callback copy(Dropkick.Ecto.File.t(), String.t(), Keyword.t()) ::
+              {:ok, Dropkick.Ecto.File.t()} | {:error, String.t()}
 
   @doc """
   Deletes the given attachment with the underlyning storage module.
-  Diferently from the `read` and `copy` actions that takes into consideration the current attachment's storage.
-  This function assumes the attachment being deleted uses the configured storage. So, if your current attachment
-  is configured as `Disk` and you try to delete an attachment which storage is setup as `Memory`, the call will fail.
   """
-  @callback delete(Attachment.t(), [option]) :: :ok | {:error, String.t()}
+  @callback delete(Dropkick.Ecto.File.t(), Keyword.t()) :: :ok | {:error, String.t()}
 
-  @doc """
-  Returns the current configured storage.
-  """
-  def current, do: Application.fetch_env!(:dropkick, :storage)
+  @doc false
+  def incompatible_storage_message(action, attempted_storage, current_storage) do
+    "Incompatible storage found. Cannot #{action} this file using #{inspect(attempted_storage)} because it was stored as #{inspect(current_storage)}"
+  end
 end

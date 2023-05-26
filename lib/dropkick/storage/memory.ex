@@ -1,42 +1,43 @@
 defmodule Dropkick.Storage.Memory do
-  alias Dropkick.{Storage, Attachable, Attachment}
+  @behaviour Dropkick.Storage
 
-  @behaviour Storage
-
-  @impl Storage
-  def put(upload, _opts \\ []) do
-    with {:ok, content} <- Attachable.content(upload),
+  @impl true
+  def store(%Dropkick.Ecto.File{status: :cached} = file, _opts \\ []) do
+    with {:ok, content} <- file.storage.read(file),
          {:ok, pid} <- StringIO.open(content) do
-      type = Attachable.type(upload)
-      name = Attachable.name(upload)
-      key = encode_key(pid, name)
-
-      {:ok,
-       %Attachment{
-         key: key,
-         filename: name,
-         storage: __MODULE__,
-         content_type: type
-       }}
+      key = encode_key(pid, file.filename)
+      {:ok, Map.merge(file, %{key: key, status: :stored, storage: __MODULE__})}
     end
   end
 
-  @impl Storage
-  def read(%Attachment{} = atch, _opts \\ []) do
-    {:ok, read_from_memory(atch)}
+  @impl true
+  def read(%Dropkick.Ecto.File{} = file, _opts \\ []) do
+    if storage = file.storage != Dropkick.Storage.Memory do
+      raise Dropkick.Storage.incompatible_storage_message(:read, __MODULE__, storage)
+    end
+
+    {:ok, read_from_memory(file)}
   end
 
-  @impl Storage
-  def copy(%Attachment{} = atch, path, _opts \\ []) do
-    with content <- read_from_memory(atch),
+  @impl true
+  def copy(%Dropkick.Ecto.File{} = file, dest, _opts \\ []) do
+    if storage = file.storage != Dropkick.Storage.Memory do
+      raise Dropkick.Storage.incompatible_storage_message(:copy, __MODULE__, storage)
+    end
+
+    with content <- read_from_memory(file),
          {:ok, pid} <- StringIO.open(content) do
-      {:ok, Map.replace!(atch, :key, encode_key(pid, path))}
+      {:ok, Map.replace!(file, :key, encode_key(pid, dest))}
     end
   end
 
-  @impl Storage
-  def delete(%Attachment{} = atch, _opts \\ []) do
-    pid = decode_key(Attachable.key(atch))
+  @impl true
+  def delete(%Dropkick.Ecto.File{} = file, _opts \\ []) do
+    if storage = file.storage != Dropkick.Storage.Memory do
+      raise Dropkick.Storage.incompatible_storage_message(:delete, __MODULE__, storage)
+    end
+
+    pid = decode_key(file.key)
     with {:ok, _} <- StringIO.close(pid), do: :ok
   end
 
@@ -63,9 +64,8 @@ defmodule Dropkick.Storage.Memory do
     |> :erlang.list_to_pid()
   end
 
-  defp read_from_memory(atch) do
-    atch
-    |> Attachable.key()
+  defp read_from_memory(%{key: key}) do
+    key
     |> decode_key()
     |> StringIO.contents()
     |> then(&elem(&1, 0))

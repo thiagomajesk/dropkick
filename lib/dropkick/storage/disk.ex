@@ -1,78 +1,53 @@
 defmodule Dropkick.Storage.Disk do
-  alias Dropkick.{Storage, Attachable, Attachment}
+  @behaviour Dropkick.Storage
 
-  @behaviour Storage
+  @impl true
+  def store(%Dropkick.Ecto.File{status: :cached} = file, opts \\ []) do
+    folder = Keyword.fetch!(opts, :folder)
+    key = Path.join(folder, file.filename)
 
-  @impl Storage
-  def put(attachable, opts \\ []) do
-    folder = Keyword.get(opts, :folder, "uploads")
-    prefix = Keyword.get(opts, :prefix, "/")
-
-    name = Attachable.name(attachable)
-    path = Path.join([folder, prefix, name])
-
-    with :ok <- File.mkdir_p(Path.dirname(path)),
-         {:ok, content} <- Attachable.content(attachable) do
-      type = Attachable.type(attachable)
-      File.write!(path, content)
-
-      {:ok,
-       %Attachment{
-         key: path,
-         filename: name,
-         storage: __MODULE__,
-         content_type: type
-       }}
+    with :ok <- File.mkdir_p(Path.dirname(key)),
+         {:ok, content} <- file.storage.read(file),
+         File.write(key, content) do
+      {:ok, Map.merge(file, %{key: key, status: :stored, storage: __MODULE__})}
     end
   end
 
-  @impl Storage
-  def read(atch, opts \\ [])
+  @impl true
+  def read(%Dropkick.Ecto.File{} = file, _opts \\ []) do
+    if storage = file.storage != Dropkick.Storage.Disk do
+      raise Dropkick.Storage.incompatible_storage_message(:read, __MODULE__, storage)
+    end
 
-  @impl Storage
-  def read(%Attachment{storage: Dropkick.Storage.Disk} = atch, _opts) do
-    case File.read(Attachable.key(atch)) do
+    case File.read(file.key) do
       {:error, reason} -> {:error, "Could not read file: #{reason}"}
       success_result -> success_result
     end
   end
 
-  @impl Storage
-  def read(%Attachment{} = atch, _opts) do
-    case Attachable.content(atch) do
-      {:error, reason} -> {:error, "Could not read file: #{reason}"}
-      success_result -> success_result
+  @impl true
+  def copy(%Dropkick.Ecto.File{} = file, dest, opts \\ []) do
+    if storage = file.storage != Dropkick.Storage.Disk do
+      raise Dropkick.Storage.incompatible_storage_message(:copy, __MODULE__, storage)
     end
-  end
 
-  @impl Storage
-  def copy(atch, path, opts \\ [])
-
-  @impl Storage
-  def copy(%Attachment{storage: Dropkick.Storage.Disk} = atch, path, opts) do
     move? = Keyword.get(opts, :move, false)
 
-    with :ok <- File.mkdir_p(Path.dirname(path)),
-         :ok <- move_or_rename(Attachable.key(atch), path, move?) do
-      {:ok, Map.replace!(atch, :key, path)}
+    with :ok <- File.mkdir_p(Path.dirname(dest)),
+         :ok <- move_or_rename(file.key, dest, move?) do
+      {:ok, Map.replace!(file, :key, dest)}
     else
       {:error, reason} -> {:error, "Could not copy file: #{reason}"}
     end
   end
 
-  @impl Storage
-  def copy(%Attachment{} = atch, dest, _opts) do
-    with {:ok, content} <- Attachable.content(atch),
-         :ok <- File.write(Attachable.key(atch), content) do
-      {:ok, Map.replace!(atch, :key, dest)}
-    else
-      {:error, reason} -> {:error, "Could not copy file: #{reason}"}
+  @impl true
+  def delete(%Dropkick.Ecto.File{} = file, _opts \\ []) do
+    if storage = file.storage != Dropkick.Storage.Disk do
+      raise Dropkick.Storage.incompatible_storage_message(:delete, __MODULE__, storage)
     end
-  end
 
-  @impl Storage
-  def delete(%Attachment{} = atch, _opts \\ []) do
-    case File.rm(Attachable.key(atch)) do
+    case File.rm(file.key) do
       {:error, reason} -> {:error, "Could not delete file: #{reason}"}
       success_result -> success_result
     end

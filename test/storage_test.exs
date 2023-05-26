@@ -2,11 +2,9 @@ defmodule StorageTest do
   use ExUnit.Case, async: true
   use Dropkick.FileCase
 
-  alias Dropkick.{Storage, Attachment}
-
   setup %{path: path} do
     {:ok,
-     upload: %Plug.Upload{
+     upload: %{
        path: path,
        filename: Path.basename(path),
        content_type: "image/jpg"
@@ -14,53 +12,72 @@ defmodule StorageTest do
   end
 
   describe "disk storage" do
-    test "put action", %{dir: dir, upload: upload} do
-      assert {:ok, %Attachment{key: key}} = Storage.Disk.put(upload, folder: dir)
+    test "store action", %{dir: dir, upload: upload} do
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+
+      assert {:ok, %Dropkick.Ecto.File{key: key, status: :stored}} =
+               Dropkick.Storage.Disk.store(file, folder: Path.join(dir, "uploads"))
+
       assert File.exists?(key)
     end
 
     test "read action", %{dir: dir, upload: upload} do
-      assert {:ok, atch} = Storage.Disk.put(upload, folder: dir)
-      assert {:ok, "Hello World"} = Storage.Disk.read(atch)
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+      {:ok, file} = Dropkick.Storage.Disk.store(file, folder: Path.join(dir, "uploads"))
+
+      assert {:ok, "Hello World"} = Dropkick.Storage.Disk.read(file)
     end
 
     test "copy action", %{dir: dir, upload: upload} do
-      copy_path = Path.join(dir, "new.jpg")
-      assert {:ok, atch} = Storage.Disk.put(upload, folder: dir)
-      assert {:ok, %Attachment{key: ^copy_path}} = Storage.Disk.copy(atch, copy_path)
-      assert File.exists?(copy_path)
+      dest = Path.join([dir, "copied", "new.jpg"])
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+      {:ok, file} = Dropkick.Storage.Disk.store(file, folder: Path.join(dir, "uploads"))
+
+      assert {:ok, %Dropkick.Ecto.File{key: ^dest}} = Dropkick.Storage.Disk.copy(file, dest)
+      assert File.exists?(dest)
     end
 
     test "delete action", %{dir: dir, upload: upload} do
-      assert {:ok, atch} = Storage.Disk.put(upload, folder: dir)
-      assert :ok = Storage.Disk.delete(atch)
-      refute File.exists?(atch.key)
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+      {:ok, file} = Dropkick.Storage.Disk.store(file, folder: Path.join(dir, "uploads"))
+
+      assert :ok = Dropkick.Storage.Disk.delete(file)
+      refute File.exists?(file.key)
     end
   end
 
   describe "memory storage" do
-    test "put action", %{upload: upload} do
-      assert {:ok, %Attachment{key: key}} = Storage.Memory.put(upload)
-      assert Process.alive?(Storage.Memory.decode_key(key))
+    test "store action", %{upload: upload} do
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+
+      assert {:ok, %Dropkick.Ecto.File{key: key, status: :stored}} =
+               Dropkick.Storage.Memory.store(file)
+
+      assert Process.alive?(Dropkick.Storage.Memory.decode_key(key))
     end
 
     test "read action", %{upload: upload} do
-      assert {:ok, atch} = Storage.Memory.put(upload)
-      assert {:ok, "Hello World"} = Storage.Memory.read(atch)
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+      {:ok, file} = Dropkick.Storage.Memory.store(file)
+
+      assert {:ok, "Hello World"} = Dropkick.Storage.Memory.read(file)
     end
 
     test "copy action", %{dir: dir, upload: upload} do
-      copy_path = Path.join(dir, "new.jpg")
-      assert {:ok, atch} = Storage.Memory.put(upload)
-      assert {:ok, %Attachment{key: key}} = Storage.Memory.copy(atch, copy_path)
-      assert Process.alive?(Storage.Memory.decode_key(key))
+      dest = Path.join([dir, "copied", "new.jpg"])
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+      {:ok, file} = Dropkick.Storage.Memory.store(file)
+
+      assert {:ok, %Dropkick.Ecto.File{key: key}} = Dropkick.Storage.Memory.copy(file, dest)
+      assert Process.alive?(Dropkick.Storage.Memory.decode_key(key))
     end
 
     test "delete action", %{upload: upload} do
-      assert {:ok, atch} = Storage.Memory.put(upload)
-      assert Process.alive?(Storage.Memory.decode_key(atch.key))
-      assert :ok = Storage.Memory.delete(atch)
-      refute Process.alive?(Storage.Memory.decode_key(atch.key))
+      {:ok, file} = Dropkick.Ecto.File.cast(upload)
+      {:ok, file} = Dropkick.Storage.Memory.store(file)
+
+      assert :ok = Dropkick.Storage.Memory.delete(file)
+      refute Process.alive?(Dropkick.Storage.Memory.decode_key(file.key))
     end
   end
 end
