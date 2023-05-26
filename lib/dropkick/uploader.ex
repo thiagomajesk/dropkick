@@ -22,16 +22,19 @@ defmodule Dropkick.Uploader do
               | {:resize, float(), list()}
               | {:thumbnail, pos_integer() | String.t(), list()}
 
+  def store(uploader, schema, field, file) do
+    with {storage, opts} <- uploader.storage(schema, field),
+         {:ok, file} <- uploader.validation(schema, field, file) do
+      storage.store(file, opts)
+    end
+  end
+
   defmacro __using__(_opts) do
     quote do
       @behaviour Dropkick.Uploader
 
-      def store(schema, field, file) do
-        with {storage, opts} <- __MODULE__.storage(schema, field),
-             {:ok, file} <- __MODULE__.validation(schema, field, file) do
-          storage.store(file, opts)
-        end
-      end
+      def store(schema, field, file),
+        do: Dropkick.Uploader.store(__MODULE__, schema, field, file)
 
       def validation(_schema, _field, file), do: {:ok, file}
 
