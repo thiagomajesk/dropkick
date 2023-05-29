@@ -41,8 +41,10 @@ defmodule StorageTest do
       {:ok, file} = Dropkick.Ecto.File.cast(upload)
       {:ok, file} = Dropkick.Storage.Disk.store(file, folder: Path.join(dir, "uploads"))
 
-      assert :ok = Dropkick.Storage.Disk.delete(file)
-      refute File.exists?(file.key)
+      assert {:ok, %Dropkick.Ecto.File{key: key, status: :deleted}} =
+               Dropkick.Storage.Disk.delete(file)
+
+      refute File.exists?(key)
     end
   end
 
@@ -76,8 +78,10 @@ defmodule StorageTest do
       {:ok, file} = Dropkick.Ecto.File.cast(upload)
       {:ok, file} = Dropkick.Storage.Memory.store(file)
 
-      assert :ok = Dropkick.Storage.Memory.delete(file)
-      refute Process.alive?(Dropkick.Storage.Memory.decode_key(file.key))
+      assert {:ok, %Dropkick.Ecto.File{key: key, status: :deleted}} =
+               Dropkick.Storage.Memory.delete(file)
+
+      refute Process.alive?(Dropkick.Storage.Memory.decode_key(key))
     end
   end
 end

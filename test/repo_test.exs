@@ -29,12 +29,10 @@ defmodule RepoTest do
      }}
   end
 
-  test "insert_with_uploads", %{upload: upload} do
+  test "insert_with_files", %{upload: upload} do
     changeset = Ecto.Changeset.cast(%TestUser{}, %{name: "foo", avatar: upload}, [:name, :avatar])
 
-    assert {:ok, %TestUser{avatar: avatar}} =
-             TestRepo.insert_with_files(changeset, uploader: TestUploader)
-
+    assert {:ok, %TestUser{avatar: avatar}} = TestRepo.insert_with_files(changeset, TestUploader)
     assert File.exists?(avatar.key)
   end
 end

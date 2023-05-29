@@ -1,5 +1,42 @@
 defmodule Dropkick.Ecto.Changeset do
   @doc """
+  Returns a diff that can be used to define which operations should be done with a file.
+  """
+  def diff_files(changeset) do
+    %{data: %{__struct__: module}} = changeset
+
+    fields =
+      Enum.filter(module.__schema__(:fields), fn field ->
+        module.__schema__(:type, field) == Dropkick.Ecto.File
+      end)
+
+    Enum.reduce(fields, %{}, fn field, acc ->
+      IO.inspect(changeset.changes, label: "CHANGES")
+      old_value = Map.get(changeset.data, field)
+      new_value = Ecto.Changeset.get_change(changeset, field)
+
+      IO.inspect(old_value, label: "OL VALUE")
+      IO.inspect(new_value, label: "NEW VALUE")
+
+      case {old_value, new_value} do
+        {nil, nil} ->
+          acc
+
+        {nil, new_value} ->
+          Map.put(acc, {field, :store}, new_value)
+
+        {old_value, nil} ->
+          Map.put(acc, {field, :delete}, old_value)
+
+        {old_value, new_value} ->
+          acc
+          |> Map.put({field, :delete}, old_value)
+          |> Map.put({field, :store}, new_value)
+      end
+    end)
+  end
+
+  @doc """
   Validates that the given field of type `Dropkick.Ecto.File` has the allowed extensions.
   """
   def validate_upload_extension(changeset, field, accepted_extensions) do

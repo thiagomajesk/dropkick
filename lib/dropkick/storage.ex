@@ -30,7 +30,8 @@ defmodule Dropkick.Storage do
   @doc """
   Deletes the given attachment with the underlyning storage module.
   """
-  @callback delete(Dropkick.Ecto.File.t(), Keyword.t()) :: :ok | {:error, String.t()}
+  @callback delete(Dropkick.Ecto.File.t(), Keyword.t()) ::
+              {:ok, Dropkick.Ecto.File.type()} | {:error, String.t()}
 
   @doc false
   def incompatible_storage_message(action, attempted_storage, current_storage) do

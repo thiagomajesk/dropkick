@@ -7,8 +7,7 @@ defmodule FileTest do
       key: "/",
       filename: "",
       content_type: "",
-      status: :cached,
-      storage: ""
+      status: :cached
     }
 
     assert {:ok, %Dropkick.Ecto.File{}} = Dropkick.Ecto.File.cast(upload)
@@ -29,8 +28,7 @@ defmodule FileTest do
       "key" => "/",
       "filename" => "",
       "content_type" => "",
-      "status" => "stored",
-      "storage" => "Dropkick.Storage.Memory"
+      "status" => "stored"
     }
 
     assert {:ok, %Dropkick.Ecto.File{}} = Dropkick.Ecto.File.load(upload)
@@ -41,18 +39,17 @@ defmodule FileTest do
       key: "/",
       filename: "",
       content_type: "",
-      status: :cached,
-      storage: ""
+      status: :cached
     }
 
-    assert {:ok, %{key: "/", filename: "", content_type: "", storage: "", status: :cached}} =
+    assert {:ok, %{key: "/", filename: "", content_type: "", status: :cached}} =
              Dropkick.Ecto.File.dump(upload)
   end
 
   test "dump map" do
-    upload = %{key: "/", filename: "", content_type: "", storage: "", status: :cached}
+    upload = %{key: "/", filename: "", content_type: "", status: :cached}
 
-    assert {:ok, %{key: "/", filename: "", content_type: "", storage: "", status: :cached}} =
+    assert {:ok, %{key: "/", filename: "", content_type: "", status: :cached}} =
              Dropkick.Ecto.File.dump(upload)
   end
 end

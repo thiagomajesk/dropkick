@@ -24,8 +24,16 @@ defmodule Dropkick.Uploader do
 
   def store(uploader, schema, field, file) do
     with {storage, opts} <- uploader.storage(schema, field),
-         {:ok, file} <- uploader.validation(schema, field, file) do
+         {:ok, file} <- uploader.validation(schema, field, file),
+         {:ok, file} <- uploader.on_before_store(schema, field, file) do
       storage.store(file, opts)
+    end
+  end
+
+  def delete(uploader, schema, field, file) do
+    with {storage, opts} <- uploader.storage(schema, field),
+         {:ok, file} <- uploader.on_before_delete(schema, field, file) do
+      storage.delete(file, opts)
     end
   end
 
@@ -36,9 +44,22 @@ defmodule Dropkick.Uploader do
       def store(schema, field, file),
         do: Dropkick.Uploader.store(__MODULE__, schema, field, file)
 
+      def delete(schema, field, file),
+        do: Dropkick.Uploader.delete(__MODULE__, schema, field, file)
+
+      def storage(schema, field) do
+        with storage <- Application.fetch_env!(:dropkick, :storage),
+             storage_opts <- Application.fetch_env!(:dropkick, storage) do
+          {storage, storage_opts}
+        end
+      end
+
       def validation(_schema, _field, file), do: {:ok, file}
 
-      defoverridable validation: 3
+      def on_before_store(_schema, _field, file), do: {:ok, file}
+      def on_before_delete(_schema, _field, file), do: {:ok, file}
+
+      defoverridable validation: 3, storage: 2, on_before_store: 3, on_before_delete: 3
     end
   end
 

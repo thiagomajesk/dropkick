@@ -1,7 +1,7 @@
 defmodule Dropkick.Ecto.File do
   @derive Jason.Encoder
-  @enforce_keys [:key, :storage, :status, :filename, :content_type]
-  defstruct [:key, :storage, :status, :filename, :content_type, :metadata]
+  @enforce_keys [:key, :status, :filename, :content_type]
+  defstruct [:key, :status, :filename, :content_type, :metadata]
 
   use Ecto.Type
 
@@ -15,7 +15,6 @@ defmodule Dropkick.Ecto.File do
     {:ok,
      %__MODULE__{
        key: path,
-       storage: Dropkick.Storage.Disk,
        status: :cached,
        filename: filename,
        content_type: content_type
@@ -28,9 +27,6 @@ defmodule Dropkick.Ecto.File do
   def load(data) when is_map(data) do
     data =
       Enum.map(data, fn
-        {"storage", v} ->
-          {:storage, String.to_atom(v)}
-
         {"status", "cached"} ->
           {:status, :cached}
 

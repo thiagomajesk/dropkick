@@ -48,9 +48,7 @@ defmodule Dropkick.Ecto.Repo do
 
   defmacro __using__(_opts) do
     quote do
-      def insert_with_files(%Ecto.Changeset{} = changeset, opts \\ []) do
-        {uploader, opts} = Keyword.pop!(opts, :uploader)
-
+      def insert_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
         files_multi = Dropkick.Ecto.Repo.files_multi(changeset, :insert, &uploader.store/3)
 
         Ecto.Multi.new()

@@ -3,28 +3,20 @@ defmodule Dropkick.Storage.Memory do
 
   @impl true
   def store(%Dropkick.Ecto.File{status: :cached} = file, _opts \\ []) do
-    with {:ok, content} <- file.storage.read(file),
+    with {:ok, content} <- File.read(file.key),
          {:ok, pid} <- StringIO.open(content) do
       key = encode_key(pid, file.filename)
-      {:ok, Map.merge(file, %{key: key, status: :stored, storage: __MODULE__})}
+      {:ok, Map.merge(file, %{key: key, status: :stored})}
     end
   end
 
   @impl true
   def read(%Dropkick.Ecto.File{} = file, _opts \\ []) do
-    if storage = file.storage != Dropkick.Storage.Memory do
-      raise Dropkick.Storage.incompatible_storage_message(:read, __MODULE__, storage)
-    end
-
     {:ok, read_from_memory(file)}
   end
 
   @impl true
   def copy(%Dropkick.Ecto.File{} = file, dest, _opts \\ []) do
-    if storage = file.storage != Dropkick.Storage.Memory do
-      raise Dropkick.Storage.incompatible_storage_message(:copy, __MODULE__, storage)
-    end
-
     with content <- read_from_memory(file),
          {:ok, pid} <- StringIO.open(content) do
       {:ok, Map.replace!(file, :key, encode_key(pid, dest))}
@@ -33,12 +25,10 @@ defmodule Dropkick.Storage.Memory do
 
   @impl true
   def delete(%Dropkick.Ecto.File{} = file, _opts \\ []) do
-    if storage = file.storage != Dropkick.Storage.Memory do
-      raise Dropkick.Storage.incompatible_storage_message(:delete, __MODULE__, storage)
+    with pid <- decode_key(file.key),
+         {:ok, _} <- StringIO.close(pid) do
+      {:ok, Map.replace!(file, :status, :deleted)}
     end
-
-    pid = decode_key(file.key)
-    with {:ok, _} <- StringIO.close(pid), do: :ok
   end
 
   @doc false
