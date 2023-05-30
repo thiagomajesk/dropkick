@@ -12,6 +12,8 @@ defmodule Dropkick.FileCase do
 
   using do
     quote do
+      # Prevent unecessary loggin on tests
+      @moduletag :capture_log
       # Set module attribute to retrieve value from helpers
       # and proxy value to tags so we can properly cleanup after all tests
       @moduletag case_id: System.unique_integer([:positive])

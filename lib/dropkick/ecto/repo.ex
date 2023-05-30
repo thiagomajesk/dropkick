@@ -1,72 +1,93 @@
 defmodule Dropkick.Ecto.Repo do
-  @doc """
-  Generates a multi that allows invoking side effects for the files in a changeset.
-  It expects the name of a previous operation that returns the associated schema.
-
-  ## Example
-
-      files_multi(changeset, :insert, fn schema, field, file ->
-        # Do something with the file inside the transaction
-      end)
-
-  You can than use the resulting multi and append it to another operation like so:
-
-      multi = files_multi(changeset, :insert, &side_effects/3)
-      Ecto.Multi.append(Ecto.Multi.new(), multi)
-
-  """
-  def files_multi(changeset, operation, callback) when is_function(callback, 3) do
-    %{data: %{__struct__: module}} = changeset
-
-    fields =
-      Enum.filter(module.__schema__(:fields), fn field ->
-        module.__schema__(:type, field) == Dropkick.Ecto.File
-      end)
-
-    files_multi =
-      Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
-        Ecto.Multi.run(multi, {:file, field}, fn _repo, operations ->
-          schema = Map.fetch!(operations, operation)
-          callback.(schema, field, Map.get(schema, field))
-        end)
-      end)
-
-    schema_multi =
-      Ecto.Multi.run(Ecto.Multi.new(), :schema, fn repo, operations ->
-        {schema, operations} = Map.pop!(operations, operation)
-
-        changes =
-          operations
-          |> Enum.map(fn {{:file, field}, file} -> {field, file} end)
-          |> Enum.into(%{})
-
-        repo.update(Ecto.Changeset.change(schema, changes))
-      end)
-
-    Ecto.Multi.append(files_multi, schema_multi)
-  end
-
   defmacro __using__(_opts) do
     quote do
       def insert_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
-        files_multi = Dropkick.Ecto.Repo.files_multi(changeset, :insert, &uploader.store/3)
+        %{data: %{__struct__: module}} = changeset
+
+        fields =
+          Enum.filter(module.__schema__(:fields), fn field ->
+            Ecto.Changeset.changed?(changeset, field) &&
+              module.__schema__(:type, field) == Dropkick.Ecto.File
+          end)
+
+        files_multi =
+          Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
+            Ecto.Multi.run(multi, {:file, field}, fn repo, %{insert: schema} ->
+              with {:ok, file} <- uploader.store(schema, field, Map.get(schema, field)) do
+                repo.update(Ecto.Changeset.change(schema, %{field => file}))
+              end
+            end)
+          end)
 
         Ecto.Multi.new()
         |> Ecto.Multi.insert(:insert, changeset, opts)
         |> Ecto.Multi.append(files_multi)
-        |> execute_transaction()
-      end
-
-      defp execute_transaction(multi) do
-        case __MODULE__.transaction(multi) do
-          {:ok, %{schema: schema}} ->
+        |> __MODULE__.transaction()
+        |> case do
+          {:ok, %{insert: schema}} ->
             {:ok, schema}
 
-          {:error, :schema, changeset, _changes_so_far} ->
-            {:error, changeset}
+          {:error, {:file, field}, reason, %{insert: schema}} ->
+            {:error, Ecto.Changeset.add_error(changeset, field, inspect(reason))}
+        end
+      end
 
-          {:error, field, {changeset, reason}, _changes_so_far} ->
-            {:error, Ecto.Changeset.add_error(changeset, field, reason)}
+      def update_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
+        %{data: %{__struct__: module}} = changeset
+
+        fields =
+          Enum.filter(module.__schema__(:fields), fn field ->
+            Ecto.Changeset.changed?(changeset, field) &&
+              module.__schema__(:type, field) == Dropkick.Ecto.File
+          end)
+
+        files_multi =
+          Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
+            Ecto.Multi.run(multi, {:file, field}, fn repo, %{update: schema} ->
+              with {:ok, file} <- uploader.store(schema, field, Map.get(schema, field)) do
+                repo.update(Ecto.Changeset.change(schema, %{field => file}))
+              end
+            end)
+          end)
+
+        Ecto.Multi.new()
+        |> Ecto.Multi.update(:update, changeset, opts)
+        |> Ecto.Multi.append(files_multi)
+        |> __MODULE__.transaction()
+        |> case do
+          {:ok, %{update: schema}} ->
+            {:ok, schema}
+
+          {:error, {:file, field}, reason, %{update: schema}} ->
+            {:error, Ecto.Changeset.add_error(changeset, field, inspect(reason))}
+        end
+      end
+
+      def delete_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
+        %{data: %{__struct__: module}} = changeset
+
+        fields =
+          Enum.filter(module.__schema__(:fields), fn field ->
+            module.__schema__(:type, field) == Dropkick.Ecto.File
+          end)
+
+        files_multi =
+          Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
+            Ecto.Multi.run(multi, {:file, field}, fn repo, %{delete: schema} ->
+              uploader.delete(schema, field, Map.get(schema, field))
+            end)
+          end)
+
+        Ecto.Multi.new()
+        |> Ecto.Multi.delete(:delete, changeset, opts)
+        |> Ecto.Multi.append(files_multi)
+        |> __MODULE__.transaction()
+        |> case do
+          {:ok, %{delete: schema}} ->
+            {:ok, schema}
+
+          {:error, {:file, field}, reason, %{delete: schema}} ->
+            {:error, Ecto.Changeset.add_error(changeset, field, inspect(reason))}
         end
       end
     end
