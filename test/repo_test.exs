@@ -10,8 +10,9 @@ defmodule RepoTest do
     end
 
     def transform(%TestUser{name: name}, :avatar) do
-      {:thumbnail, "uploads/avatars/#{name}/thumbnails",
+      {:thumbnail,
        [
+         suffix: "thumbnails",
          size: "250x250",
          crop: :center
        ]}

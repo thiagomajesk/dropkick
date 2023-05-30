@@ -4,29 +4,32 @@ defmodule Dropkick.Transform do
 
   @supervisor Dropkick.TransformTaskSupervisor
 
-  alias __MODULE__
+  def dispatch_transforms(transforms, uploader, schema, field, file) do
+    transforms
+    |> transform_stream(uploader, schema, field, file)
+    |> Stream.run()
+  end
 
-  # def dispatch_transforms(%Dropkick.Ecto.File{} = upload, transforms, storage) do
-  #   Task.Supervisor.async_stream_nolink(@supervisor, transforms, fn transform ->
-  #     with {:ok, transformed} <- transform!(transform) do
-  #       storage.store(transformed_upload)
-  #     end
-  #   end)
-  # end
+  defp transform_stream(transforms, uploader, schema, field, file) do
+    Task.Supervisor.async_stream_nolink(@supervisor, transforms, fn transform ->
+      with {storage, opts} <- uploader.storage(schema, field),
+           {:ok, binary} <- storage.read(file) do
+        folder = Keyword.fetch!(opts, :folder)
+        transform!(binary, file.filename, folder, transform)
+      end
+    end)
+  end
 
-  # defp transform!(upload, {:thumbnail, size, params}) do
-  #   with {:ok, transform} <- thumbnail(upload, size, params), do: transform
-  # end
+  defp transform!(binary, name, folder, {:thumbnail, opts}) do
+    with {size, opts} <- Keyword.pop!(opts, :size),
+         {suffix, opts} = Keyword.pop!(opts, :suffix),
+         {:ok, image} <- Image.from_binary(binary),
+         {:ok, thumbnail} <- Image.thumbnail(image, size, opts) do
+      Vix.Vips.Image.write_to_file(thumbnail, Path.join([folder, suffix, name]))
+    end
+  end
 
-  # defp transform!(_upload, transform) do
-  #   raise "Not a valid transform param #{inspect(transform)}"
-  # end
-
-  # defp thumbnail(atch, size, opts) do
-  #   with {:ok, content} <- Dropkick.Uploadable.content(atch),
-  #        {:ok, image} <- Image.from_binary(content),
-  #        {:ok, thumbnail} <- Image.thumbnail(image, size, opts) do
-  #     Vix.Vips.Image.write_to_binary(thumbnail)
-  #   end
-  # end
+  defp transform!(_binary, _name, _folder, transform) do
+    raise "Not a valid transform param #{inspect(transform)}"
+  end
 end

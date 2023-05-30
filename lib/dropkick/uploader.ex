@@ -1,27 +1,20 @@
 defmodule Dropkick.Uploader do
+  @type transform :: :noaction | :blur | :resize | :thumbnail
+
   @callback storage(struct(), atom()) :: {module(), Keyword.t()}
 
-  @doc """
-  Validates the given
-  """
   @callback validation(struct(), atom(), Dropkick.Ecto.File.t()) ::
               {:ok, Dropkick.Ecto.File.t()} | {:error, String.t()}
 
   @doc """
-  Transforms the file with the given options. The supported options are:
-
-  ## `image/*`
-  Image transformations uses the [`image`](https://hexdocs.pm/image) library behind the scenes
-
-    - `{:thumbnail, size, opts}`: Generates an image thumbnail, receives the same options
-    as [`Image.thumbnail/3`](https://hexdocs.pm/image/Image.html#thumbnail/3)
+  Transforms the file with the given options.
+  Image transformations uses the [`image`](https://hexdocs.pm/image) library behind the scenes.
   """
-  @callback transform(struct(), atom()) ::
-              :noaction
-              | {:blur, list()}
-              | {:resize, float(), list()}
-              | {:thumbnail, pos_integer() | String.t(), list()}
+  @callback transform(struct(), atom()) :: {transform(), Keyword.t()}
 
+  @doc """
+  Stores the given file
+  """
   def store(uploader, schema, field, file) do
     with {storage, opts} <- uploader.storage(schema, field),
          {:ok, file} <- uploader.validation(schema, field, file),
@@ -30,6 +23,9 @@ defmodule Dropkick.Uploader do
     end
   end
 
+  @doc """
+  Deletes the given file
+  """
   def delete(uploader, schema, field, file) do
     with {storage, opts} <- uploader.storage(schema, field),
          :ok <- uploader.on_before_delete(schema, field, file) do
