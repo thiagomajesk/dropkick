@@ -3,15 +3,40 @@ defmodule Dropkick.File do
   @enforce_keys [:key, :status, :filename, :content_type]
   defstruct [:key, :status, :filename, :content_type, :metadata]
 
-  use Ecto.Type
+  use Ecto.ParameterizedType
 
   @impl true
-  def type, do: :map
+  def type(_params \\ %{}), do: :map
 
   @impl true
-  def cast(%__MODULE__{} = file), do: {:ok, file}
+  def init(opts), do: Enum.into(opts, %{})
 
-  def cast(%{filename: filename, path: path, content_type: content_type}) do
+  @impl true
+  def cast(_data, _params \\ %{})
+
+  def cast(nil, _params), do: {:ok, nil}
+
+  def cast(%__MODULE__{} = file, _params), do: {:ok, file}
+
+  def cast(%{filename: filename, path: path}, %{infer: true}) do
+    case Infer.get_from_path(path) do
+      nil ->
+        {:error, "File might be invalid. Could not infer file type information"}
+
+      %{extension: ext, mime_type: content_type} ->
+        filename = Path.basename(filename, Path.extname(filename))
+
+        {:ok,
+         %__MODULE__{
+           key: path,
+           status: :cached,
+           filename: "#{filename}.#{ext}",
+           content_type: content_type
+         }}
+    end
+  end
+
+  def cast(%{filename: filename, path: path, content_type: content_type}, _params) do
     {:ok,
      %__MODULE__{
        key: path,
@@ -21,10 +46,14 @@ defmodule Dropkick.File do
      }}
   end
 
-  def cast(_), do: :error
+  def cast(_data, _params), do: :error
 
   @impl true
-  def load(data) when is_map(data) do
+  def load(_data, _loader \\ nil, _params \\ %{})
+
+  def load(nil, _loader, _params), do: {:ok, nil}
+
+  def load(data, _loader, _params) when is_map(data) do
     data =
       Enum.map(data, fn
         {"status", k} ->
@@ -38,7 +67,14 @@ defmodule Dropkick.File do
   end
 
   @impl true
-  def dump(%__MODULE__{} = file), do: {:ok, Map.from_struct(file)}
-  def dump(data) when is_map(data), do: {:ok, data}
-  def dump(_), do: :error
+  def dump(_data, _dumper \\ nil, _params \\ %{})
+  def dump(nil, _dumper, _params), do: {:ok, nil}
+  def dump(%__MODULE__{} = file, _dumper, _params), do: {:ok, Map.from_struct(file)}
+  def dump(data, _dumper, _params) when is_map(data), do: {:ok, data}
+  def dump(_data, _dumper, _params), do: :error
+
+  @impl true
+  def equal?(_val1, _val2, _params \\ %{})
+  def equal?(%{key: key1}, %{key: key2}, _params), do: key1 == key2
+  def equal?(val1, val2, _params), do: val1 == val2
 end
