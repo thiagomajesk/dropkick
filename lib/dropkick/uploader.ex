@@ -8,9 +8,9 @@ defmodule Dropkick.Uploader do
       @behaviour Dropkick.Uploader
 
       @doc """
-      Stores the given file
+      Stores the given `%Dropkick.File` struct.
       """
-      def store(schema, field, file) do
+      def store(schema, field, %Dropkick.File{} = file) do
         with storage <- Application.fetch_env!(:dropkick, :storage),
              folder <- Application.fetch_env!(:dropkick, :folder),
              prefix <- __MODULE__.storage_prefix(schema, field),
@@ -20,9 +20,9 @@ defmodule Dropkick.Uploader do
       end
 
       @doc """
-      Deletes the given file
+      Deletes the given `%Dropkick.File` struct.
       """
-      def delete(schema, field, file) do
+      def delete(schema, field, %Dropkick.File{} = file) do
         with storage <- Application.fetch_env!(:dropkick, :storage),
              folder <- Application.fetch_env!(:dropkick, :folder),
              prefix <- __MODULE__.storage_prefix(schema, field),

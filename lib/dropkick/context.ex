@@ -1,6 +1,6 @@
-defmodule Dropkick.Repo do
+defmodule Dropkick.Context do
   def insert_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
-    repo = Application.get_env(:dropkick, :repo)
+    repo = Application.fetch_env!(:dropkick, :repo)
     %{data: %{__struct__: module}} = changeset
 
     fields =
@@ -32,7 +32,7 @@ defmodule Dropkick.Repo do
   end
 
   def update_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
-    repo = Application.get_env(:dropkick, :repo)
+    repo = Application.fetch_env!(:dropkick, :repo)
     %{data: %{__struct__: module}} = changeset
 
     fields =
@@ -65,7 +65,7 @@ defmodule Dropkick.Repo do
   end
 
   def delete_with_files(%Ecto.Changeset{} = changeset, uploader, opts \\ []) do
-    repo = Application.get_env(:dropkick, :repo)
+    repo = Application.fetch_env!(:dropkick, :repo)
     %{data: %{__struct__: module}} = changeset
 
     fields =
