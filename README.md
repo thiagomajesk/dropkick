@@ -71,3 +71,4 @@ end
 - Add more file transformations
 - Support other types of storages (S3, Azure, etc)
 - Add strategy to allow cleaning up old files after update
+- Improve documentation for modules and functions
