@@ -1,4 +1,4 @@
-defmodule Dropkick.Ecto.File do
+defmodule Dropkick.File do
   @derive Jason.Encoder
   @enforce_keys [:key, :status, :filename, :content_type]
   defstruct [:key, :status, :filename, :content_type, :metadata]
@@ -27,11 +27,8 @@ defmodule Dropkick.Ecto.File do
   def load(data) when is_map(data) do
     data =
       Enum.map(data, fn
-        {"status", "cached"} ->
-          {:status, :cached}
-
-        {"status", "stored"} ->
-          {:status, :stored}
+        {"status", k} ->
+          {:status, String.to_existing_atom(k)}
 
         {k, v} ->
           {String.to_existing_atom(k), v}

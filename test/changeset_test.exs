@@ -12,36 +12,63 @@ defmodule ChangesetTest do
   end
 
   @tag filename: "foo.png"
-  test "validate_upload_extension/2", %{upload: upload} do
+  test "unsafe_validate_file_extension/2", %{upload: upload} do
     changeset = Ecto.Changeset.cast(%TestUser{}, %{name: "foo", avatar: upload}, [:avatar])
 
     assert %Ecto.Changeset{valid?: true} =
-             Dropkick.Ecto.Changeset.validate_upload_extension(changeset, :avatar, ~w(.png))
+             Dropkick.Changeset.unsafe_validate_file_extension(
+               changeset,
+               :avatar,
+               ~w(.png)
+             )
 
     assert %Ecto.Changeset{valid?: false} =
-             Dropkick.Ecto.Changeset.validate_upload_extension(changeset, :avatar, ~w(.gif))
+             Dropkick.Changeset.unsafe_validate_file_extension(
+               changeset,
+               :avatar,
+               ~w(.gif)
+             )
+  end
+
+  @tag filename: "foo.png"
+  test "unsafe_validate_file_type/2", %{upload: upload} do
+    changeset = Ecto.Changeset.cast(%TestUser{}, %{name: "foo", avatar: upload}, [:avatar])
+
+    assert %Ecto.Changeset{valid?: true} =
+             Dropkick.Changeset.unsafe_validate_file_type(
+               changeset,
+               :avatar,
+               ~w(image/jpg)
+             )
+
+    assert %Ecto.Changeset{valid?: false} =
+             Dropkick.Changeset.unsafe_validate_file_type(
+               changeset,
+               :avatar,
+               ~w(image/gif)
+             )
   end
 
   @tag filename: "foo.gif"
-  test "validate_upload_size/2", %{upload: upload} do
+  test "unsafe_validate_file_size/2", %{upload: upload} do
     changeset = Ecto.Changeset.cast(%TestUser{}, %{name: "foo", avatar: upload}, [:avatar])
 
     assert %Ecto.Changeset{valid?: true} =
-             Dropkick.Ecto.Changeset.validate_upload_size(changeset, :avatar, is: 11)
+             Dropkick.Changeset.unsafe_validate_file_size(changeset, :avatar, is: 11)
 
     assert %Ecto.Changeset{valid?: true} =
-             Dropkick.Ecto.Changeset.validate_upload_size(changeset, :avatar, min: 11)
+             Dropkick.Changeset.unsafe_validate_file_size(changeset, :avatar, min: 11)
 
     assert %Ecto.Changeset{valid?: true} =
-             Dropkick.Ecto.Changeset.validate_upload_size(changeset, :avatar, max: 11)
+             Dropkick.Changeset.unsafe_validate_file_size(changeset, :avatar, max: 11)
 
     assert %Ecto.Changeset{valid?: false} =
-             Dropkick.Ecto.Changeset.validate_upload_size(changeset, :avatar, is: 10)
+             Dropkick.Changeset.unsafe_validate_file_size(changeset, :avatar, is: 10)
 
     assert %Ecto.Changeset{valid?: false} =
-             Dropkick.Ecto.Changeset.validate_upload_size(changeset, :avatar, min: 12)
+             Dropkick.Changeset.unsafe_validate_file_size(changeset, :avatar, min: 12)
 
     assert %Ecto.Changeset{valid?: false} =
-             Dropkick.Ecto.Changeset.validate_upload_size(changeset, :avatar, max: 10)
+             Dropkick.Changeset.unsafe_validate_file_size(changeset, :avatar, max: 10)
   end
 end

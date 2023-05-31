@@ -1,8 +1,11 @@
 defmodule Dropkick.Storage.Memory do
+  # A note about converting list to pids and vice-versa...
+  # This BIF is intended for debugging and is not to be used in application programs.
+  # This storage strategy should be used for tests only: https://www.erlang.org/doc/man/erlang.html#list_to_pid-1
   @behaviour Dropkick.Storage
 
   @impl true
-  def store(%Dropkick.Ecto.File{status: :cached} = file, _opts \\ []) do
+  def store(%Dropkick.File{status: :cached} = file, _opts \\ []) do
     with {:ok, content} <- File.read(file.key),
          {:ok, pid} <- StringIO.open(content) do
       key = encode_key(pid, file.filename)
@@ -11,12 +14,12 @@ defmodule Dropkick.Storage.Memory do
   end
 
   @impl true
-  def read(%Dropkick.Ecto.File{} = file, _opts \\ []) do
+  def read(%Dropkick.File{} = file, _opts \\ []) do
     {:ok, read_from_memory(file)}
   end
 
   @impl true
-  def copy(%Dropkick.Ecto.File{} = file, dest, _opts \\ []) do
+  def copy(%Dropkick.File{} = file, dest, _opts \\ []) do
     with content <- read_from_memory(file),
          {:ok, pid} <- StringIO.open(content) do
       {:ok, Map.replace!(file, :key, encode_key(pid, dest))}
@@ -24,7 +27,7 @@ defmodule Dropkick.Storage.Memory do
   end
 
   @impl true
-  def delete(%Dropkick.Ecto.File{} = file, _opts \\ []) do
+  def delete(%Dropkick.File{} = file, _opts \\ []) do
     with pid <- decode_key(file.key),
          {:ok, _} <- StringIO.close(pid) do
       {:ok, Map.replace!(file, :status, :deleted)}
@@ -44,8 +47,6 @@ defmodule Dropkick.Storage.Memory do
 
   @doc false
   def decode_key(key) when is_binary(key) do
-    # https://www.erlang.org/doc/man/erlang.html#list_to_pid-1
-    # This BIF is intended for debugging and is not to be used in application programs.
     <<"mem://", encoded::binary-size(12), ?/, _rest::binary>> = key
 
     encoded

@@ -2,7 +2,6 @@ ExUnit.start()
 
 defmodule TestRepo do
   use Ecto.Repo, otp_app: :dropkick, adapter: Ecto.Adapters.Postgres
-  use Dropkick.Ecto.Repo
 end
 
 Application.put_env(:dropkick, TestRepo,
@@ -16,7 +15,7 @@ defmodule TestUser do
 
   schema "users" do
     field(:name, :string)
-    field(:avatar, Dropkick.Ecto.File)
+    field(:avatar, Dropkick.File)
   end
 end
 
