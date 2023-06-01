@@ -1,5 +1,5 @@
 defmodule Dropkick.File do
-  @derive {Inspect, only: [:key]}
+  @derive {Inspect, optional: [:metadata]}
   @derive {Jason.Encoder, except: [:binary]}
   @enforce_keys [:key, :status, :filename, :content_type]
   defstruct [:key, :status, :filename, :content_type, :binary, :metadata]
@@ -31,7 +31,6 @@ defmodule Dropkick.File do
          %__MODULE__{
            key: path,
            status: :cached,
-           binary: File.read!(path),
            filename: "#{filename}.#{ext}",
            content_type: content_type
          }}
@@ -43,7 +42,6 @@ defmodule Dropkick.File do
      %__MODULE__{
        key: path,
        status: :cached,
-       binary: File.read!(path),
        filename: filename,
        content_type: content_type
      }}
