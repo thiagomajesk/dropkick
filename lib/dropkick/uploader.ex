@@ -17,34 +17,33 @@ defmodule Dropkick.Uploader do
       Stores the given `%Dropkick.File` struct.
       """
       def store(%Dropkick.File{} = file, scope) do
-        with storage <- Application.fetch_env!(:dropkick, :storage),
-             folder <- Application.fetch_env!(:dropkick, :folder),
-             prefix <- __MODULE__.storage_prefix(scope),
-             :ok <- __MODULE__.on_before_store(file, scope) do
-          file
-          |> storage.store(folder: folder, prefix: prefix)
-          |> Dropkick.Task.after_success(fn file ->
-            with :ok <- __MODULE__.on_after_store(file, scope) do
-              Logger.info("Finished storing file #{inspect(file)}")
-            end
-          end)
-        end
+        storage = Application.fetch_env!(:dropkick, :storage)
+        folder = Application.fetch_env!(:dropkick, :folder)
+        prefix = __MODULE__.storage_prefix(scope)
+
+        :ok = __MODULE__.on_before_store(file, scope)
+
+        file
+        |> storage.store(folder: folder, prefix: prefix)
+        |> Dropkick.Task.after_success(fn file ->
+          :ok = __MODULE__.on_after_store(file, scope)
+          Logger.info("Finished storing file #{inspect(file)}")
+        end)
       end
 
       @doc """
       Deletes the given `%Dropkick.File` struct.
       """
       def delete(%Dropkick.File{} = file, scope) do
-        with storage <- Application.fetch_env!(:dropkick, :storage),
-             :ok <- __MODULE__.on_before_delete(file, scope) do
-          file
-          |> storage.delete()
-          |> Dropkick.Task.after_success(fn file ->
-            with :ok <- __MODULE__.on_after_delete(file, scope) do
-              Logger.info("Finished deleting file #{inspect(file)}")
-            end
-          end)
-        end
+        storage = Application.fetch_env!(:dropkick, :storage)
+        :ok = __MODULE__.on_before_delete(file, scope)
+
+        file
+        |> storage.delete()
+        |> Dropkick.Task.after_success(fn file ->
+          :ok = __MODULE__.on_after_delete(file, scope)
+          Logger.info("Finished deleting file #{inspect(file)}")
+        end)
       end
 
       def storage_prefix(_scope), do: ""
