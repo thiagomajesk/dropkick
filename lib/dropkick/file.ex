@@ -1,5 +1,6 @@
 defmodule Dropkick.File do
   @derive Jason.Encoder
+  @derive {Inspect, only: [:key]}
   @enforce_keys [:key, :status, :filename, :content_type]
   defstruct [:key, :status, :filename, :content_type, :metadata]
 
