@@ -43,8 +43,8 @@ defmodule MyApp.Uploader do
   def storage_prefix({user, :avatar}), do: "avatars/#{user.id}"
 
   # You can add callbacks to modify or cleanup files after operations
-  # def on_before_store(_scope, file), do: {:ok, file}
-  # def on_before_delete(_scope, file), do: {:ok, file}
+  # def on_before_store(file, _scope), do: {:ok, file}
+  # def on_before_delete(file, _scope), do: {:ok, file}
 end 
 ```
 

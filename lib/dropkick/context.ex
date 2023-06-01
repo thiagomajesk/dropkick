@@ -12,7 +12,7 @@ defmodule Dropkick.Context do
     files_multi =
       Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
         Ecto.Multi.run(multi, {:file, field}, fn repo, %{insert: schema} ->
-          with {:ok, file} <- uploader.store({schema, field}, Map.get(schema, field)) do
+          with {:ok, file} <- uploader.store(Map.get(schema, field), {schema, field}) do
             repo.update(Ecto.Changeset.change(schema, %{field => file}))
           end
         end)
@@ -44,7 +44,7 @@ defmodule Dropkick.Context do
     files_multi =
       Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
         Ecto.Multi.run(multi, {:file, field}, fn repo, %{update: schema} ->
-          with {:ok, file} <- uploader.store({schema, field}, Map.get(schema, field)) do
+          with {:ok, file} <- uploader.store(Map.get(schema, field), {schema, field}) do
             # TODO: Add strategy to delete old files instead of keeping them
             repo.update(Ecto.Changeset.change(schema, %{field => file}))
           end
@@ -77,7 +77,7 @@ defmodule Dropkick.Context do
       Enum.reduce(fields, Ecto.Multi.new(), fn field, multi ->
         Ecto.Multi.run(multi, {:file, field}, fn _repo, %{delete: schema} ->
           # TODO: Add strategy to keep old files instead of deleting them
-          uploader.delete({schema, field}, Map.get(schema, field))
+          uploader.delete(Map.get(schema, field), {schema, field})
         end)
       end)
 

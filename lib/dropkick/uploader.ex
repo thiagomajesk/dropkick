@@ -1,11 +1,11 @@
 defmodule Dropkick.Uploader do
   @callback storage_prefix(any()) :: String.t()
 
-  @callback on_before_store(any(), Dropkick.File.t()) :: {module(), Keyword.t()}
-  @callback on_after_store(any(), Dropkick.File.t()) :: {module(), Keyword.t()}
+  @callback on_before_store(Dropkick.File.t(), any()) :: :ok
+  @callback on_after_store(Dropkick.File.t(), any()) :: :ok
 
-  @callback on_before_delete(any(), Dropkick.File.t()) :: {module(), Keyword.t()}
-  @callback on_after_delete(any(), Dropkick.File.t()) :: {module(), Keyword.t()}
+  @callback on_before_delete(Dropkick.File.t(), any()) :: :ok
+  @callback on_after_delete(Dropkick.File.t(), any()) :: :ok
 
   defmacro __using__(_opts) do
     quote do
@@ -16,15 +16,15 @@ defmodule Dropkick.Uploader do
       @doc """
       Stores the given `%Dropkick.File` struct.
       """
-      def store(scope, %Dropkick.File{} = file) do
+      def store(%Dropkick.File{} = file, scope) do
         with storage <- Application.fetch_env!(:dropkick, :storage),
              folder <- Application.fetch_env!(:dropkick, :folder),
              prefix <- __MODULE__.storage_prefix(scope),
-             {:ok, file} <- __MODULE__.on_before_store(scope, file) do
+             :ok <- __MODULE__.on_before_store(file, scope) do
           file
           |> storage.store(folder: folder, prefix: prefix)
           |> Dropkick.Task.after_success(fn file ->
-            with {:ok, file} <- __MODULE__.on_after_store(scope, file) do
+            with :ok <- __MODULE__.on_after_store(file, scope) do
               Logger.info("Finished storing file #{inspect(file)}")
             end
           end)
@@ -34,15 +34,13 @@ defmodule Dropkick.Uploader do
       @doc """
       Deletes the given `%Dropkick.File` struct.
       """
-      def delete(scope, %Dropkick.File{} = file) do
+      def delete(%Dropkick.File{} = file, scope) do
         with storage <- Application.fetch_env!(:dropkick, :storage),
-             folder <- Application.fetch_env!(:dropkick, :folder),
-             prefix <- __MODULE__.storage_prefix(scope),
-             {:ok, file} <- __MODULE__.on_before_delete(scope, file) do
+             :ok <- __MODULE__.on_before_delete(file, scope) do
           file
-          |> storage.delete(folder: folder, prefix: prefix)
+          |> storage.delete()
           |> Dropkick.Task.after_success(fn file ->
-            with {:ok, file} <- __MODULE__.on_after_delete(scope, file) do
+            with :ok <- __MODULE__.on_after_delete(file, scope) do
               Logger.info("Finished deleting file #{inspect(file)}")
             end
           end)
@@ -51,11 +49,11 @@ defmodule Dropkick.Uploader do
 
       def storage_prefix(_scope), do: ""
 
-      def on_before_store(_scope, file), do: {:ok, file}
-      def on_after_store(_scope, file), do: {:ok, file}
+      def on_before_store(file, _scope), do: :ok
+      def on_after_store(file, _scope), do: :ok
 
-      def on_before_delete(_scope, file), do: {:ok, file}
-      def on_after_delete(_scope, file), do: {:ok, file}
+      def on_before_delete(file, _scope), do: :ok
+      def on_after_delete(file, _scope), do: :ok
 
       defoverridable storage_prefix: 1,
                      on_before_store: 2,
