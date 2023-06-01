@@ -16,7 +16,7 @@ defmodule Dropkick.Uploader do
       @doc """
       Stores the given `%Dropkick.File` struct.
       """
-      def store(%Dropkick.File{} = file, scope) do
+      def store(%Dropkick.File{status: :cached} = file, scope) do
         storage = Application.fetch_env!(:dropkick, :storage)
         folder = Application.fetch_env!(:dropkick, :folder)
         prefix = __MODULE__.storage_prefix(scope)
