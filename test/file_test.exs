@@ -10,7 +10,7 @@ defmodule FileTest do
       status: :cached
     }
 
-    assert {:ok, ^file} = Dropkick.File.cast(file)
+    assert {:ok, ^file} = Dropkick.File.cast(file, %{})
   end
 
   test "cast map", %{path: path} do
@@ -28,7 +28,7 @@ defmodule FileTest do
               filename: ^name,
               content_type: "image/jpg",
               status: :cached
-            }} = Dropkick.File.cast(map)
+            }} = Dropkick.File.cast(map, %{})
   end
 
   test "load map", %{path: path} do
@@ -47,7 +47,7 @@ defmodule FileTest do
               filename: ^name,
               content_type: "image/jpg",
               status: :stored
-            }} = Dropkick.File.load(map)
+            }} = Dropkick.File.load(map, nil, %{})
   end
 
   test "dump file", %{path: path} do
@@ -66,7 +66,7 @@ defmodule FileTest do
               filename: ^name,
               content_type: "image/jpg",
               status: :stored
-            }} = Dropkick.File.dump(file)
+            }} = Dropkick.File.dump(file, nil, %{})
   end
 
   test "dump map", %{path: path} do
@@ -85,7 +85,7 @@ defmodule FileTest do
               filename: ^name,
               content_type: "image/jpg",
               status: :stored
-            }} = Dropkick.File.dump(map)
+            }} = Dropkick.File.dump(map, nil, %{})
   end
 
   @tag copy: "test/fixtures/images/puppies.jpg"

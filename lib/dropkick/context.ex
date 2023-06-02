@@ -6,7 +6,10 @@ defmodule Dropkick.Context do
     fields =
       Enum.filter(module.__schema__(:fields), fn field ->
         Ecto.Changeset.changed?(changeset, field) &&
-          module.__schema__(:type, field) == Dropkick.File
+          match?(
+            {:parameterized, Dropkick.File, %{field: ^field}},
+            module.__schema__(:type, field)
+          )
       end)
 
     files_multi =
@@ -41,7 +44,10 @@ defmodule Dropkick.Context do
     fields =
       Enum.filter(module.__schema__(:fields), fn field ->
         Ecto.Changeset.changed?(changeset, field) &&
-          module.__schema__(:type, field) == Dropkick.File
+          match?(
+            {:parameterized, Dropkick.File, %{field: ^field}},
+            module.__schema__(:type, field)
+          )
       end)
 
     files_multi =
@@ -76,7 +82,7 @@ defmodule Dropkick.Context do
 
     fields =
       Enum.filter(module.__schema__(:fields), fn field ->
-        module.__schema__(:type, field) == Dropkick.File
+        match?({:parameterized, Dropkick.File, %{field: ^field}}, module.__schema__(:type, field))
       end)
 
     files_multi =

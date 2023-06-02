@@ -7,14 +7,12 @@ defmodule Dropkick.File do
   use Ecto.ParameterizedType
 
   @impl true
-  def type(_params \\ %{}), do: :map
+  def type(_params), do: :map
 
   @impl true
   def init(opts), do: Enum.into(opts, %{})
 
   @impl true
-  def cast(_data, _params \\ %{})
-
   def cast(nil, _params), do: {:ok, nil}
 
   def cast(%__MODULE__{} = file, _params), do: {:ok, file}
@@ -50,8 +48,6 @@ defmodule Dropkick.File do
   def cast(_data, _params), do: :error
 
   @impl true
-  def load(_data, _loader \\ nil, _params \\ %{})
-
   def load(nil, _loader, _params), do: {:ok, nil}
 
   def load(data, _loader, _params) when is_map(data) do
@@ -68,14 +64,12 @@ defmodule Dropkick.File do
   end
 
   @impl true
-  def dump(_data, _dumper \\ nil, _params \\ %{})
   def dump(nil, _dumper, _params), do: {:ok, nil}
   def dump(%__MODULE__{} = file, _dumper, _params), do: {:ok, Map.from_struct(file)}
   def dump(data, _dumper, _params) when is_map(data), do: {:ok, data}
   def dump(_data, _dumper, _params), do: :error
 
   @impl true
-  def equal?(_val1, _val2, _params \\ %{})
   def equal?(%{key: key1}, %{key: key2}, _params), do: key1 == key2
   def equal?(val1, val2, _params), do: val1 == val2
 end
