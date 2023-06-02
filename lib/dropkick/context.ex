@@ -26,6 +26,9 @@ defmodule Dropkick.Context do
       {:ok, %{insert: schema}} ->
         {:ok, schema}
 
+      {:error, :insert, changeset, _} ->
+        {:error, changeset}
+
       {:error, {:file, field}, reason, %{insert: _schema}} ->
         {:error, Ecto.Changeset.add_error(changeset, field, inspect(reason))}
     end
@@ -59,6 +62,9 @@ defmodule Dropkick.Context do
       {:ok, %{update: schema}} ->
         {:ok, schema}
 
+      {:error, :update, changeset, _} ->
+        {:error, changeset}
+
       {:error, {:file, field}, reason, %{update: _schema}} ->
         {:error, Ecto.Changeset.add_error(changeset, field, inspect(reason))}
     end
@@ -88,6 +94,9 @@ defmodule Dropkick.Context do
     |> case do
       {:ok, %{delete: schema}} ->
         {:ok, schema}
+
+      {:error, :delete, changeset, _} ->
+        {:error, changeset}
 
       {:error, {:file, field}, reason, %{delete: _schema}} ->
         {:error, Ecto.Changeset.add_error(changeset, field, inspect(reason))}
