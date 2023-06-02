@@ -71,6 +71,7 @@ defmodule Dropkick.MixProject do
       {:image, "~> 0.30.0"},
       {:jason, "~> 1.0"},
       {:infer, "~> 0.2.4"},
+      {:sizeable, "~> 1.0"},
       {:ex_doc, "~> 0.29", only: :dev, runtime: false},
       {:exvcr, "~> 0.13.5", only: :test},
       {:ecto_sql, ">= 3.0.0", only: :test},

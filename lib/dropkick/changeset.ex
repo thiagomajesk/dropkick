@@ -30,13 +30,16 @@ defmodule Dropkick.Changeset do
 
       cond do
         opts[:is] != nil && size != opts[:is] ->
-          [{field, "The file should have exactly #{opts[:is]} bytes"}]
+          size = Sizeable.filesize(opts[:is])
+          [{field, "The file should have exactly #{size}"}]
 
         opts[:max] && size > opts[:max] ->
-          [{field, "The file size should be no more than #{opts[:max]} bytes"}]
+          size = Sizeable.filesize(opts[:max])
+          [{field, "The file size should be no more than #{size}"}]
 
         opts[:min] && size < opts[:min] ->
-          [{field, "The file size should be no less than #{opts[:min]} bytes"}]
+          size = Sizeable.filesize(opts[:min])
+          [{field, "The file size should be no less than #{size}"}]
 
         true ->
           []
