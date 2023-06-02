@@ -53,8 +53,14 @@ defmodule Dropkick.File do
   def load(data, _loader, _params) when is_map(data) do
     data =
       Enum.map(data, fn
-        {"status", k} ->
-          {:status, String.to_existing_atom(k)}
+        {"status", "stored"} ->
+          {:status, :stored}
+
+        {"status", "cached"} ->
+          {:status, :cached}
+
+        {"status", "deleted"} ->
+          {:status, :deleted}
 
         {k, v} ->
           {String.to_existing_atom(k), v}
