@@ -1,43 +1,37 @@
 defmodule Dropkick.Storage.Memory do
-  alias Dropkick.{Storage, Attachable, Attachment}
+  # A note about converting list to pids and vice-versa...
+  # This BIF is intended for debugging and is not to be used in application programs.
+  # This storage strategy should be used for tests only: https://www.erlang.org/doc/man/erlang.html#list_to_pid-1
+  @behaviour Dropkick.Storage
 
-  @behaviour Storage
-
-  @impl Storage
-  def put(upload, _opts \\ []) do
-    with {:ok, content} <- Attachable.content(upload),
+  @impl true
+  def store(%Dropkick.File{status: :cached} = file, _opts \\ []) do
+    with {:ok, content} <- File.read(file.key),
          {:ok, pid} <- StringIO.open(content) do
-      type = Attachable.type(upload)
-      name = Attachable.name(upload)
-      key = encode_key(pid, name)
-
-      {:ok,
-       %Attachment{
-         key: key,
-         filename: name,
-         storage: __MODULE__,
-         content_type: type
-       }}
+      key = encode_key(pid, file.filename)
+      {:ok, Map.merge(file, %{key: key, status: :stored})}
     end
   end
 
-  @impl Storage
-  def read(%Attachment{} = atch, _opts \\ []) do
-    {:ok, read_from_memory(atch)}
+  @impl true
+  def read(%Dropkick.File{} = file, _opts \\ []) do
+    {:ok, read_from_memory(file)}
   end
 
-  @impl Storage
-  def copy(%Attachment{} = atch, path, _opts \\ []) do
-    with content <- read_from_memory(atch),
+  @impl true
+  def copy(%Dropkick.File{} = file, dest, _opts \\ []) do
+    with content <- read_from_memory(file),
          {:ok, pid} <- StringIO.open(content) do
-      {:ok, Map.replace!(atch, :key, encode_key(pid, path))}
+      {:ok, Map.replace!(file, :key, encode_key(pid, dest))}
     end
   end
 
-  @impl Storage
-  def delete(%Attachment{} = atch, _opts \\ []) do
-    pid = decode_key(Attachable.key(atch))
-    with {:ok, _} <- StringIO.close(pid), do: :ok
+  @impl true
+  def delete(%Dropkick.File{} = file, _opts \\ []) do
+    with pid <- decode_key(file.key),
+         {:ok, _} <- StringIO.close(pid) do
+      {:ok, Map.replace!(file, :status, :deleted)}
+    end
   end
 
   @doc false
@@ -53,8 +47,6 @@ defmodule Dropkick.Storage.Memory do
 
   @doc false
   def decode_key(key) when is_binary(key) do
-    # https://www.erlang.org/doc/man/erlang.html#list_to_pid-1
-    # This BIF is intended for debugging and is not to be used in application programs.
     <<"mem://", encoded::binary-size(12), ?/, _rest::binary>> = key
 
     encoded
@@ -63,9 +55,8 @@ defmodule Dropkick.Storage.Memory do
     |> :erlang.list_to_pid()
   end
 
-  defp read_from_memory(atch) do
-    atch
-    |> Attachable.key()
+  defp read_from_memory(%{key: key}) do
+    key
     |> decode_key()
     |> StringIO.contents()
     |> then(&elem(&1, 0))

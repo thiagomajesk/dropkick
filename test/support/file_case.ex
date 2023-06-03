@@ -12,6 +12,8 @@ defmodule Dropkick.FileCase do
 
   using do
     quote do
+      # Prevent unecessary loggin on tests
+      @moduletag :capture_log
       # Set module attribute to retrieve value from helpers
       # and proxy value to tags so we can properly cleanup after all tests
       @moduletag case_id: System.unique_integer([:positive])
@@ -25,7 +27,7 @@ defmodule Dropkick.FileCase do
     filename =
       Map.get_lazy(tags, :filename, fn ->
         file_id = System.unique_integer()
-        Base.encode32("#{file_id}.jpg", padding: false)
+        Base.encode32(to_string(file_id), padding: false) <> ".jpg"
       end)
 
     tags =

@@ -67,14 +67,15 @@ defmodule Dropkick.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:jason, "~> 1.0"},
       {:ecto, "~> 3.0"},
-      {:plug, "~> 1.0"},
-      {:exvcr, "~> 0.13.5", only: :test},
       {:image, "~> 0.30.0"},
+      {:jason, "~> 1.0"},
+      {:infer, "~> 0.2.4"},
+      {:sizeable, "~> 1.0"},
       {:ex_doc, "~> 0.29", only: :dev, runtime: false},
-      {:mime, "~> 2.0"},
-      {:ex_image_info, "~> 0.2.4"}
+      {:exvcr, "~> 0.13.5", only: :test},
+      {:ecto_sql, ">= 3.0.0", only: :test},
+      {:postgrex, ">= 0.0.0", only: :test}
     ]
   end
 end

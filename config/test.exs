@@ -1,3 +1,6 @@
 import Config
 
-config :dropkick, storage: Dropkick.Storage.Disk
+config :dropkick,
+  repo: TestRepo,
+  storage: Dropkick.Storage.Disk,
+  folder: "uploads"
