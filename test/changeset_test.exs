@@ -19,14 +19,14 @@ defmodule ChangesetTest do
              Dropkick.Changeset.validate_file_extension(
                changeset,
                :avatar,
-               ~w(.png)
+               ~w(png)
              )
 
     assert %Ecto.Changeset{valid?: false} =
              Dropkick.Changeset.validate_file_extension(
                changeset,
                :avatar,
-               ~w(.gif)
+               ~w(gif)
              )
   end
 
