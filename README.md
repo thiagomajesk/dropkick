@@ -42,9 +42,13 @@ defmodule MyApp.Uploader do
   # Defines where to store the user avatar through pattern matching
   def storage_prefix({user, :avatar}), do: "avatars/#{user.id}"
 
-  # You can add callbacks to modify or cleanup files after operations
-  # def on_before_store(file, _scope), do: {:ok, file}
-  # def on_before_delete(file, _scope), do: {:ok, file}
+  # You can also implement a list of callbacks that allow you to 
+  # customize what happens in your upload pipeline
+  # def process(file, _scope), do: {:ok, file}
+  # def before_store(file, _scope), do: {:ok, file}
+  # def after_store(file, _scope), do: {:ok, file}
+  # def before_delete(file, _scope), do: {:ok, file}
+  # def after_delete(file, _scope), do: {:ok, file}
 end 
 ```
 
@@ -68,7 +72,12 @@ end
 
 ## Missing bits
 
-- Add more file transformations
+- Add integration for file transformations
+- Add integration with [Briefly](https://hexdocs.pm/briefly) to make transformation/ cleanup of temporary files easier.
 - Support other types of storages (S3, Azure, etc)
 - Add strategy to allow cleaning up old files after update
-- Improve documentation for modules and functions
+- Improve documentation and examples for modules and functions
+- Add examples of using libraries for processing files: 
+  - [`image`](https://hexdocs.pm/image)
+  - [`ex_optimizer`](https://hexdocs.pm/ex_optimizer)
+  - [`mogrify`](https://hexdocs.pm/mogrify)
