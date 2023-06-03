@@ -1,7 +1,7 @@
 defmodule Dropkick.MixProject do
   use Mix.Project
 
-  @version "0.0.0"
+  @version "0.0.1"
   @url "https://github.com/thiagomajesk/dropkick"
 
   def project do
