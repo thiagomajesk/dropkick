@@ -31,13 +31,9 @@ config :dropkick,
   folder: "uploads"
 ```
 
-<<<<<<< HEAD
 ### Uploader
 
 Define an uplodader for your application:
-=======
-After that, you simply cast the type like you would normally do:
->>>>>>> master
 
 ```elixir
 defmodule MyApp.Uploader do
@@ -76,7 +72,6 @@ end
 
 ## Missing bits
 
-<<<<<<< HEAD
 - Add integration for file transformations
 - Add integration with [Briefly](https://hexdocs.pm/briefly) to make transformation/ cleanup of temporary files easier.
 - Support other types of storages (S3, Azure, etc)
@@ -86,8 +81,3 @@ end
   - [`image`](https://hexdocs.pm/image)
   - [`ex_optimizer`](https://hexdocs.pm/ex_optimizer)
   - [`mogrify`](https://hexdocs.pm/mogrify)
-=======
-- Implement more image transformations
-- Add video transformations
-- Add support to S3 storage
->>>>>>> master
