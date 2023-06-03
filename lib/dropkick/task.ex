@@ -1,17 +1,10 @@
 defmodule Dropkick.Task do
   @doc """
-  Runs a function asynchronously on a success result tuple `{:ok, result}`.
-  Whatever was passed as the first argument is returned imediately and for
-  successfull results, `fun` runs with the success value from the tuple.
+  Pipes the `value` to the given `fun` and returns the `value` itself.
+  The function runs asynchronously in a unliked process for safe side effects.
   """
-  def after_success(result_tuple, fun) do
-    with {:ok, result} <- result_tuple,
-         :ok <- dispatch_task(fn -> fun.(result) end),
-         do: {:ok, result}
-  end
-
-  defp dispatch_task(fun) do
+  def tap_async(value, fun) do
     sup = Dropkick.TransformTaskSupervisor
-    Task.Supervisor.async_nolink(sup, fun) && :ok
+    Task.Supervisor.async_nolink(sup, fun.(value)) && value
   end
 end
