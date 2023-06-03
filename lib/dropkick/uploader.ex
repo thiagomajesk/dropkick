@@ -32,14 +32,6 @@ defmodule Dropkick.Uploader do
   @callback after_store(Dropkick.File.t(), any()) :: {:ok, Dropkick.File.t()}
 
   @doc """
-  Process some logic after storing a `%Dropkick.File` struct.
-  When a success tuple is returned, the value is simply logged into the terminal.
-  Whatever is executed inside this callback is completely isolated and doesn't affect the pipeline.
-  You can use this callback to do any post-processing with the file without modifying it.
-  """
-  @callback finalize_store(Dropkick.File.t(), any()) :: {:ok, Dropkick.File.t()}
-
-  @doc """
   Process some logic before deleting a `%Dropkick.File` struct.
   This function must return a success tuple with the file, otherwise the operation will fail.
   When an error is returned, the delete operation won't be executed and the pipeline is aborted.
@@ -54,12 +46,12 @@ defmodule Dropkick.Uploader do
   @callback after_delete(Dropkick.File.t(), any()) :: {:ok, Dropkick.File.t()}
 
   @doc """
-  Process some logic after deleting a `%Dropkick.File` struct.
+  Process some logic after storing/deleting a `%Dropkick.File` struct.
   When a success tuple is returned, the value is simply logged into the terminal.
   Whatever is executed inside this callback is completely isolated and doesn't affect the pipeline.
-  You can use this callback to do any post-processing with the file without modifying it.
+  You can implement this callback to do any post-processing with without modifying the original file.
   """
-  @callback finalize_delete(Dropkick.File.t(), any()) :: {:ok, Dropkick.File.t()}
+  @callback process(Dropkick.File.t(), any()) :: {:ok, Dropkick.File.t()}
 
   defmacro __using__(_opts) do
     quote do
@@ -79,7 +71,7 @@ defmodule Dropkick.Uploader do
              {:ok, file} <- storage.store(file, folder: folder, prefix: prefix),
              {:ok, file} <- __MODULE__.after_store(file, scope) do
           Dropkick.Task.tap_async({:ok, file}, fn {:ok, file} ->
-            with {:ok, file} <- __MODULE__.finalize_store(file, scope) do
+            with {:ok, file} <- __MODULE__.process(file, scope) do
               Logger.info("Finished storing file #{inspect(file)}")
             end
           end)
@@ -96,7 +88,7 @@ defmodule Dropkick.Uploader do
              {:ok, file} <- storage.delete(file),
              {:ok, file} <- __MODULE__.after_delete(file, scope) do
           Dropkick.Task.tap_async({:ok, file}, fn {:ok, file} ->
-            with {:ok, result} <- __MODULE__.finalize_delete(file, scope) do
+            with {:ok, result} <- __MODULE__.process(file, scope) do
               Logger.info("Finished deleting file #{inspect(result)}")
             end
           end)
@@ -107,19 +99,18 @@ defmodule Dropkick.Uploader do
 
       def before_store(file, _scope), do: {:ok, file}
       def after_store(file, _scope), do: {:ok, file}
-      def finalize_store(file, _scope), do: {:ok, file}
 
       def before_delete(file, _scope), do: {:ok, file}
       def after_delete(file, _scope), do: {:ok, file}
-      def finalize_delete(file, _scope), do: {:ok, file}
+
+      def process(file, _scope), do: {:ok, file}
 
       defoverridable storage_prefix: 1,
                      before_store: 2,
                      after_store: 2,
-                     finalize_store: 2,
                      before_delete: 2,
                      after_delete: 2,
-                     finalize_delete: 2
+                     process: 2
     end
   end
 end
